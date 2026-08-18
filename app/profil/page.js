@@ -94,8 +94,6 @@ const cities = [
 ];
 
 export default function ProfilePage() {
-  const supabase = createClient();
-
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -110,26 +108,36 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    let active = true;
+
     async function loadProfile() {
+      const supabase = createClient();
+
       const {
-        data: { user }
+        data: { user },
+        error: userError
       } = await supabase.auth.getUser();
 
-      if (!user) {
+      if (userError || !user) {
         window.location.href = "/giris";
+        return;
+      }
+
+      if (!active) {
         return;
       }
 
       setUser(user);
 
-      const { data, error } = await supabase
+      const { data, error: profileError } = await supabase
         .from("profiles")
-        .select("*")
+        .select("id, name, age, gender, city, bio")
         .eq("id", user.id)
         .maybeSingle();
 
-      if (error) {
-        setError(error.message);
+      if (profileError) {
+        console.error("Profil yükleme hatası:", profileError);
+        setError(profileError.message);
         setLoading(false);
         return;
       }
@@ -146,7 +154,11 @@ export default function ProfilePage() {
     }
 
     loadProfile();
-  }, [supabase]);
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function handleSave(event) {
     event.preventDefault();
@@ -154,6 +166,12 @@ export default function ProfilePage() {
     setSaving(true);
     setMessage("");
     setError("");
+
+    if (!user) {
+      setError("Oturum bulunamadı. Lütfen tekrar giriş yap.");
+      setSaving(false);
+      return;
+    }
 
     if (!name.trim()) {
       setError("Adını girmen gerekiyor.");
@@ -187,29 +205,45 @@ export default function ProfilePage() {
       return;
     }
 
-    const { error } = await supabase
+    const supabase = createClient();
+
+    const profileData = {
+      id: user.id,
+      name: name.trim(),
+      age: ageNumber,
+      gender,
+      city,
+      bio: bio.trim()
+    };
+
+    const { error: saveError } = await supabase
       .from("profiles")
-      .upsert({
-        id: user.id,
-        name: name.trim(),
-        age: ageNumber,
-        gender,
-        city,
-        bio: bio.trim()
+      .upsert(profileData, {
+        onConflict: "id"
       });
 
-    if (error) {
-      setError(error.message);
+    if (saveError) {
+      console.error("Profil kayıt hatası:", saveError);
+      setError(saveError.message);
       setSaving(false);
       return;
     }
+
+    setName(profileData.name);
+    setAge(String(profileData.age));
+    setGender(profileData.gender);
+    setCity(profileData.city);
+    setBio(profileData.bio);
 
     setMessage("Profilin başarıyla kaydedildi.");
     setSaving(false);
   }
 
   async function handleLogout() {
+    const supabase = createClient();
+
     await supabase.auth.signOut();
+
     window.location.href = "/";
   }
 
@@ -330,12 +364,15 @@ export default function ProfilePage() {
                     <option value="">
                       Seç
                     </option>
+
                     <option value="Erkek">
                       Erkek
                     </option>
+
                     <option value="Kadın">
                       Kadın
                     </option>
+
                     <option value="Belirtmek istemiyorum">
                       Belirtmek istemiyorum
                     </option>
@@ -365,7 +402,10 @@ export default function ProfilePage() {
                   </option>
 
                   {cities.map((item) => (
-                    <option key={item} value={item}>
+                    <option
+                      key={item}
+                      value={item}
+                    >
                       {item}
                     </option>
                   ))}
