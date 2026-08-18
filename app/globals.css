@@ -1457,3 +1457,37 @@ footer {
     align-items: flex-start;
   }
 }
+.profile-info-list {
+  margin-bottom: 25px;
+  border-top: 1px solid #eee9e5;
+}
+
+.profile-info-item {
+  padding: 15px 0;
+  border-bottom: 1px solid #eee9e5;
+}
+
+.profile-info-item > span {
+  display: block;
+  margin-bottom: 6px;
+  color: #99918a;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.profile-info-item > strong {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #403b37;
+  font-size: 14px;
+}
+
+.profile-bio p {
+  margin: 0;
+  color: #69625c;
+  font-size: 14px;
+  line-height: 1.7;
+}
