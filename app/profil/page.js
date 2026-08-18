@@ -9,7 +9,8 @@ import {
   MapPin,
   Save,
   LogOut,
-  Camera
+  Camera,
+  Pencil
 } from "lucide-react";
 import { createClient } from "../lib/supabase/client";
 
@@ -95,6 +96,7 @@ const cities = [
 
 export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
 
   const [user, setUser] = useState(null);
 
@@ -112,8 +114,6 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    let mounted = true;
-
     async function loadProfile() {
       const supabase = createClient();
 
@@ -131,10 +131,6 @@ export default function ProfilePage() {
 
         if (!currentUser) {
           window.location.href = "/giris";
-          return;
-        }
-
-        if (!mounted) {
           return;
         }
 
@@ -158,10 +154,6 @@ export default function ProfilePage() {
           throw profileError;
         }
 
-        if (!mounted) {
-          return;
-        }
-
         setForm({
           name: data?.name || "",
           age:
@@ -182,24 +174,16 @@ export default function ProfilePage() {
           err
         );
 
-        if (mounted) {
-          setError(
-            "Profil yüklenirken hata oluştu: " +
-              err.message
-          );
-        }
+        setError(
+          "Profil yüklenirken hata oluştu: " +
+            err.message
+        );
       } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     }
 
     loadProfile();
-
-    return () => {
-      mounted = false;
-    };
   }, []);
 
   function updateField(field, value) {
@@ -285,11 +269,6 @@ export default function ProfilePage() {
       );
 
     if (saveError) {
-      console.error(
-        "Profil kayıt hatası:",
-        saveError
-      );
-
       setError(
         saveError.message
       );
@@ -298,11 +277,21 @@ export default function ProfilePage() {
       return;
     }
 
+    setForm((previous) => ({
+      ...previous,
+      age: String(ageNumber)
+    }));
+
     setMessage(
       "Profilin başarıyla güncellendi."
     );
 
     setSaving(false);
+
+    setTimeout(() => {
+      setMessage("");
+      setEditing(false);
+    }, 700);
   }
 
   async function handleLogout() {
@@ -337,6 +326,7 @@ export default function ProfilePage() {
 
   return (
     <main className="auth-page">
+
       <header className="header">
         <div className="container navigation">
 
@@ -367,281 +357,415 @@ export default function ProfilePage() {
 
         <div className="auth-card profile-card">
 
-          <div className="auth-icon">
-            <User size={25} />
-          </div>
-
-          <div className="auth-heading">
-
-            <div className="section-label">
-              PROFİLİM
+          {error && (
+            <div className="auth-message error">
+              {error}
             </div>
+          )}
 
-            <h1>
-              Profil bilgilerin
-            </h1>
+          {!editing ? (
+            <>
+              <div className="auth-heading">
 
-            <p>
-              Profil bilgilerini buradan
-              düzenleyebilirsin.
-            </p>
+                <div className="section-label">
+                  PROFİLİM
+                </div>
 
-          </div>
+                <h1>
+                  {form.name}
+                </h1>
 
-          <div className="profile-avatar-area">
-
-            <div className="profile-avatar">
-
-              {form.avatar_url ? (
-                <img
-                  src={form.avatar_url}
-                  alt="Profil fotoğrafı"
-                />
-              ) : (
-                <User size={42} />
-              )}
-
-            </div>
-
-            <button
-              type="button"
-              className="profile-photo-button"
-              onClick={() =>
-                setMessage(
-                  "Fotoğraf yükleme sistemi bir sonraki adımda aktif edilecek."
-                )
-              }
-            >
-              <Camera size={17} />
-              Profil fotoğrafı
-            </button>
-
-          </div>
-
-          <div className="profile-email">
-
-            <Mail size={17} />
-
-            <span>
-              {user?.email}
-            </span>
-
-          </div>
-
-          <form
-            onSubmit={handleSave}
-            className="auth-form"
-          >
-
-            <div className="form-group">
-
-              <label htmlFor="name">
-                Adın
-              </label>
-
-              <div className="auth-input">
-
-                <User size={18} />
-
-                <input
-                  id="name"
-                  type="text"
-                  value={form.name}
-                  onChange={(event) =>
-                    updateField(
-                      "name",
-                      event.target.value
-                    )
-                  }
-                  maxLength={50}
-                  required
-                />
+                <p>
+                  Arkadaşlık profilin
+                </p>
 
               </div>
 
-            </div>
+              <div className="profile-avatar-area">
 
-            <div className="profile-form-row">
+                <div className="profile-avatar">
 
-              <div className="form-group">
+                  {form.avatar_url ? (
+                    <img
+                      src={form.avatar_url}
+                      alt="Profil fotoğrafı"
+                    />
+                  ) : (
+                    <User size={42} />
+                  )}
 
-                <label htmlFor="age">
-                  Yaş
-                </label>
+                </div>
 
-                <div className="auth-input">
+                <div>
+                  <strong>
+                    Profil fotoğrafı
+                  </strong>
 
-                  <input
-                    id="age"
-                    type="number"
-                    min="18"
-                    max="99"
-                    value={form.age}
+                  <p
+                    style={{
+                      margin:
+                        "5px 0 0",
+                      color:
+                        "#8a837c",
+                      fontSize:
+                        "12px"
+                    }}
+                  >
+                    Fotoğraf yükleme
+                    özelliği yakında
+                    eklenecek.
+                  </p>
+                </div>
+
+              </div>
+
+              <div className="profile-email">
+                <Mail size={17} />
+
+                <span>
+                  {user?.email}
+                </span>
+              </div>
+
+              <div className="profile-info-list">
+
+                <div className="profile-info-item">
+                  <span>Yaş</span>
+                  <strong>
+                    {form.age}
+                  </strong>
+                </div>
+
+                <div className="profile-info-item">
+                  <span>Cinsiyet</span>
+                  <strong>
+                    {form.gender}
+                  </strong>
+                </div>
+
+                <div className="profile-info-item">
+                  <span>Şehir</span>
+
+                  <strong>
+                    <MapPin size={15} />
+                    {form.city}
+                  </strong>
+                </div>
+
+                <div className="profile-info-item profile-bio">
+                  <span>Hakkında</span>
+
+                  <p>
+                    {form.bio ||
+                      "Henüz bir açıklama eklenmemiş."}
+                  </p>
+                </div>
+
+              </div>
+
+              {message && (
+                <div className="auth-message success">
+                  {message}
+                </div>
+              )}
+
+              <button
+                type="button"
+                className="publish-button auth-submit"
+                onClick={() => {
+                  setMessage("");
+                  setEditing(true);
+                }}
+              >
+                <Pencil size={18} />
+                Profili Düzenle
+              </button>
+
+            </>
+          ) : (
+            <>
+              <div className="auth-heading">
+
+                <div className="section-label">
+                  PROFİLİ DÜZENLE
+                </div>
+
+                <h1>
+                  Profil bilgilerin
+                </h1>
+
+                <p>
+                  Bilgilerini buradan
+                  güncelleyebilirsin.
+                </p>
+
+              </div>
+
+              <div className="profile-avatar-area">
+
+                <div className="profile-avatar">
+
+                  {form.avatar_url ? (
+                    <img
+                      src={form.avatar_url}
+                      alt="Profil fotoğrafı"
+                    />
+                  ) : (
+                    <User size={42} />
+                  )}
+
+                </div>
+
+                <button
+                  type="button"
+                  className="profile-photo-button"
+                  onClick={() =>
+                    setMessage(
+                      "Fotoğraf yükleme sistemi bir sonraki adımda aktif edilecek."
+                    )
+                  }
+                >
+                  <Camera size={17} />
+                  Profil fotoğrafı ekle
+                </button>
+
+              </div>
+
+              <div className="profile-email">
+
+                <Mail size={17} />
+
+                <span>
+                  {user?.email}
+                </span>
+
+              </div>
+
+              <form
+                onSubmit={handleSave}
+                className="auth-form"
+              >
+
+                <div className="form-group">
+
+                  <label htmlFor="name">
+                    Adın
+                  </label>
+
+                  <div className="auth-input">
+
+                    <User size={18} />
+
+                    <input
+                      id="name"
+                      type="text"
+                      value={form.name}
+                      onChange={(event) =>
+                        updateField(
+                          "name",
+                          event.target.value
+                        )
+                      }
+                      maxLength={50}
+                      required
+                    />
+
+                  </div>
+
+                </div>
+
+                <div className="profile-form-row">
+
+                  <div className="form-group">
+
+                    <label htmlFor="age">
+                      Yaş
+                    </label>
+
+                    <div className="auth-input">
+
+                      <input
+                        id="age"
+                        type="number"
+                        min="18"
+                        max="99"
+                        value={form.age}
+                        onChange={(event) =>
+                          updateField(
+                            "age",
+                            event.target.value
+                          )
+                        }
+                        required
+                      />
+
+                    </div>
+
+                  </div>
+
+                  <div className="form-group">
+
+                    <label htmlFor="gender">
+                      Cinsiyet
+                    </label>
+
+                    <div className="auth-input">
+
+                      <select
+                        id="gender"
+                        value={form.gender}
+                        onChange={(event) =>
+                          updateField(
+                            "gender",
+                            event.target.value
+                          )
+                        }
+                        required
+                      >
+
+                        <option value="">
+                          Seç
+                        </option>
+
+                        <option value="Erkek">
+                          Erkek
+                        </option>
+
+                        <option value="Kadın">
+                          Kadın
+                        </option>
+
+                        <option value="Belirtmek istemiyorum">
+                          Belirtmek istemiyorum
+                        </option>
+
+                      </select>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+                <div className="form-group">
+
+                  <label htmlFor="city">
+                    Şehir
+                  </label>
+
+                  <div className="auth-input">
+
+                    <MapPin size={18} />
+
+                    <select
+                      id="city"
+                      value={form.city}
+                      onChange={(event) =>
+                        updateField(
+                          "city",
+                          event.target.value
+                        )
+                      }
+                      required
+                    >
+
+                      <option value="">
+                        Şehir seç
+                      </option>
+
+                      {cities.map(
+                        (item) => (
+                          <option
+                            key={item}
+                            value={item}
+                          >
+                            {item}
+                          </option>
+                        )
+                      )}
+
+                    </select>
+
+                  </div>
+
+                </div>
+
+                <div className="form-group">
+
+                  <label htmlFor="bio">
+                    Hakkında
+                  </label>
+
+                  <textarea
+                    id="bio"
+                    placeholder="Kendinden biraz bahset..."
+                    value={form.bio}
                     onChange={(event) =>
                       updateField(
-                        "age",
+                        "bio",
                         event.target.value
                       )
                     }
-                    required
+                    maxLength={500}
+                    rows={5}
                   />
 
                 </div>
 
-              </div>
+                {error && (
+                  <div className="auth-message error">
+                    {error}
+                  </div>
+                )}
 
-              <div className="form-group">
+                {message && (
+                  <div className="auth-message success">
+                    {message}
+                  </div>
+                )}
 
-                <label htmlFor="gender">
-                  Cinsiyet
-                </label>
-
-                <div className="auth-input">
-
-                  <select
-                    id="gender"
-                    value={form.gender}
-                    onChange={(event) =>
-                      updateField(
-                        "gender",
-                        event.target.value
-                      )
-                    }
-                    required
-                  >
-
-                    <option value="">
-                      Seç
-                    </option>
-
-                    <option value="Erkek">
-                      Erkek
-                    </option>
-
-                    <option value="Kadın">
-                      Kadın
-                    </option>
-
-                    <option value="Belirtmek istemiyorum">
-                      Belirtmek istemiyorum
-                    </option>
-
-                  </select>
-
-                </div>
-
-              </div>
-
-            </div>
-
-            <div className="form-group">
-
-              <label htmlFor="city">
-                Şehir
-              </label>
-
-              <div className="auth-input">
-
-                <MapPin size={18} />
-
-                <select
-                  id="city"
-                  value={form.city}
-                  onChange={(event) =>
-                    updateField(
-                      "city",
-                      event.target.value
-                    )
-                  }
-                  required
+                <button
+                  type="submit"
+                  className="publish-button auth-submit"
+                  disabled={saving}
                 >
 
-                  <option value="">
-                    Şehir seç
-                  </option>
+                  <Save size={18} />
 
-                  {cities.map(
-                    (item) => (
-                      <option
-                        key={item}
-                        value={item}
-                      >
-                        {item}
-                      </option>
-                    )
-                  )}
+                  {saving
+                    ? "Kaydediliyor..."
+                    : "Profili Kaydet"}
 
-                </select>
+                </button>
 
-              </div>
+                <button
+                  type="button"
+                  className="profile-logout"
+                  onClick={() => {
+                    setMessage("");
+                    setEditing(false);
+                  }}
+                >
+                  Vazgeç
+                </button>
 
-            </div>
-
-            <div className="form-group">
-
-              <label htmlFor="bio">
-                Hakkında
-              </label>
-
-              <textarea
-                id="bio"
-                placeholder="Kendinden biraz bahset..."
-                value={form.bio}
-                onChange={(event) =>
-                  updateField(
-                    "bio",
-                    event.target.value
-                  )
-                }
-                maxLength={500}
-                rows={5}
-              />
-
-            </div>
-
-            {error && (
-              <div className="auth-message error">
-                {error}
-              </div>
-            )}
-
-            {message && (
-              <div className="auth-message success">
-                {message}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="publish-button auth-submit"
-              disabled={saving}
-            >
-
-              <Save size={18} />
-
-              {saving
-                ? "Kaydediliyor..."
-                : "Profili Kaydet"}
-
-            </button>
-
-          </form>
+              </form>
+            </>
+          )}
 
           <button
             type="button"
             className="profile-logout"
             onClick={handleLogout}
           >
-
             <LogOut size={17} />
-
             Çıkış Yap
-
           </button>
 
         </div>
 
       </section>
+
     </main>
   );
 }
