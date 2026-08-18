@@ -1,17 +1,20 @@
 "use client";
 
 import Link from "next/link";
-
+import { useEffect, useState } from "react";
 import {
   Search,
   MapPin,
   Heart,
   Plus,
   SlidersHorizontal,
-  Sparkles
+  Sparkles,
+  User,
+  LogOut
 } from "lucide-react";
 
 import AdSlot from "./components/AdSlot";
+import { createClient } from "./lib/supabase/client";
 
 const listings = [
   {
@@ -160,6 +163,48 @@ function ListingCard({ item }) {
 }
 
 export default function Home() {
+  const supabase = createClient();
+
+  const [user, setUser] = useState(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadUser() {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+
+      if (mounted) {
+        setUser(user);
+        setCheckingAuth(false);
+      }
+    }
+
+    loadUser();
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+        setCheckingAuth(false);
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+
+    window.location.href = "/";
+  }
+
   return (
     <main>
       <header className="header">
@@ -174,13 +219,52 @@ export default function Home() {
             <a href="#nasil">Nasıl Çalışır?</a>
           </nav>
 
-          <Link
-            href="/ilan-ver"
-            className="create-button"
-          >
-            <Plus size={18} />
-            İlan Ver
-          </Link>
+          <div className="header-actions">
+            <Link
+              href="/ilan-ver"
+              className="create-button"
+            >
+              <Plus size={18} />
+              İlan Ver
+            </Link>
+
+            {checkingAuth ? null : user ? (
+              <>
+                <Link
+                  href="/profil"
+                  className="account-button"
+                >
+                  <User size={17} />
+                  Profilim
+                </Link>
+
+                <button
+                  type="button"
+                  className="logout-button"
+                  onClick={handleLogout}
+                >
+                  <LogOut size={17} />
+                  Çıkış
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/giris"
+                  className="login-button"
+                >
+                  Giriş Yap
+                </Link>
+
+                <Link
+                  href="/kayit"
+                  className="register-button"
+                >
+                  Kayıt Ol
+                </Link>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
