@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState
+} from "react";
+
 import {
   ArrowLeft,
   User,
@@ -95,69 +99,114 @@ const cities = [
 
 export default function ProfilePage() {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
-  const [name, setName] = useState("");
-  const [age, setAge] = useState("");
-  const [gender, setGender] = useState("");
-  const [city, setCity] = useState("");
-  const [bio, setBio] = useState("");
+  const [loading, setLoading] =
+    useState(true);
 
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [saving, setSaving] =
+    useState(false);
+
+  const [name, setName] =
+    useState("");
+
+  const [age, setAge] =
+    useState("");
+
+  const [gender, setGender] =
+    useState("");
+
+  const [city, setCity] =
+    useState("");
+
+  const [bio, setBio] =
+    useState("");
+
+  const [message, setMessage] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
 
   useEffect(() => {
-    let active = true;
-
     async function loadProfile() {
       const supabase = createClient();
 
-      const {
-        data: { user },
-        error: userError
-      } = await supabase.auth.getUser();
+      setLoading(true);
+      setError("");
 
-      if (userError || !user) {
+      const {
+        data: {
+          session
+        }
+      } = await supabase.auth.getSession();
+
+      if (!session?.user) {
         window.location.href = "/giris";
         return;
       }
 
-      if (!active) {
-        return;
-      }
+      const currentUser =
+        session.user;
 
-      setUser(user);
+      setUser(currentUser);
 
-      const { data, error: profileError } = await supabase
+      const {
+        data,
+        error: profileError
+      } = await supabase
         .from("profiles")
-        .select("id, name, age, gender, city, bio")
-        .eq("id", user.id)
-        .maybeSingle();
+        .select(
+          "id, name, age, gender, city, bio"
+        )
+        .eq(
+          "id",
+          currentUser.id
+        )
+        .single();
 
       if (profileError) {
-        console.error("Profil yükleme hatası:", profileError);
-        setError(profileError.message);
+        console.error(
+          "Profil okuma hatası:",
+          profileError
+        );
+
+        setError(
+          "Profil bilgileri yüklenemedi: " +
+            profileError.message
+        );
+
         setLoading(false);
         return;
       }
 
       if (data) {
-        setName(data.name || "");
-        setAge(data.age ? String(data.age) : "");
-        setGender(data.gender || "");
-        setCity(data.city || "");
-        setBio(data.bio || "");
+        setName(
+          data.name || ""
+        );
+
+        setAge(
+          data.age
+            ? String(data.age)
+            : ""
+        );
+
+        setGender(
+          data.gender || ""
+        );
+
+        setCity(
+          data.city || ""
+        );
+
+        setBio(
+          data.bio || ""
+        );
       }
 
       setLoading(false);
     }
 
     loadProfile();
-
-    return () => {
-      active = false;
-    };
   }, []);
 
   async function handleSave(event) {
@@ -168,79 +217,108 @@ export default function ProfilePage() {
     setError("");
 
     if (!user) {
-      setError("Oturum bulunamadı. Lütfen tekrar giriş yap.");
+      setError(
+        "Kullanıcı oturumu bulunamadı."
+      );
+
       setSaving(false);
       return;
     }
 
     if (!name.trim()) {
-      setError("Adını girmen gerekiyor.");
+      setError(
+        "Adını girmen gerekiyor."
+      );
+
       setSaving(false);
       return;
     }
 
     if (!age) {
-      setError("Yaşını girmen gerekiyor.");
+      setError(
+        "Yaşını girmen gerekiyor."
+      );
+
       setSaving(false);
       return;
     }
 
     if (!gender) {
-      setError("Cinsiyetini seçmen gerekiyor.");
+      setError(
+        "Cinsiyetini seçmen gerekiyor."
+      );
+
       setSaving(false);
       return;
     }
 
     if (!city) {
-      setError("Şehrini seçmen gerekiyor.");
+      setError(
+        "Şehrini seçmen gerekiyor."
+      );
+
       setSaving(false);
       return;
     }
 
-    const ageNumber = Number(age);
+    const ageNumber =
+      Number(age);
 
-    if (ageNumber < 18 || ageNumber > 99) {
-      setError("Yaş 18 ile 99 arasında olmalıdır.");
+    if (
+      ageNumber < 18 ||
+      ageNumber > 99
+    ) {
+      setError(
+        "Yaş 18 ile 99 arasında olmalıdır."
+      );
+
       setSaving(false);
       return;
     }
 
-    const supabase = createClient();
+    const supabase =
+      createClient();
 
-    const profileData = {
-      id: user.id,
-      name: name.trim(),
-      age: ageNumber,
-      gender,
-      city,
-      bio: bio.trim()
-    };
-
-    const { error: saveError } = await supabase
+    const {
+      error: saveError
+    } = await supabase
       .from("profiles")
-      .upsert(profileData, {
-        onConflict: "id"
-      });
+      .update({
+        name: name.trim(),
+        age: ageNumber,
+        gender,
+        city,
+        bio: bio.trim()
+      })
+      .eq(
+        "id",
+        user.id
+      );
 
     if (saveError) {
-      console.error("Profil kayıt hatası:", saveError);
-      setError(saveError.message);
+      console.error(
+        "Profil kayıt hatası:",
+        saveError
+      );
+
+      setError(
+        saveError.message
+      );
+
       setSaving(false);
       return;
     }
 
-    setName(profileData.name);
-    setAge(String(profileData.age));
-    setGender(profileData.gender);
-    setCity(profileData.city);
-    setBio(profileData.bio);
+    setMessage(
+      "Profilin başarıyla güncellendi."
+    );
 
-    setMessage("Profilin başarıyla kaydedildi.");
     setSaving(false);
   }
 
   async function handleLogout() {
-    const supabase = createClient();
+    const supabase =
+      createClient();
 
     await supabase.auth.signOut();
 
@@ -252,7 +330,9 @@ export default function ProfilePage() {
       <main className="auth-page">
         <div className="container auth-container">
           <div className="auth-card">
-            <p>Profil yükleniyor...</p>
+            <p>
+              Profil yükleniyor...
+            </p>
           </div>
         </div>
       </main>
@@ -263,104 +343,144 @@ export default function ProfilePage() {
     <main className="auth-page">
       <header className="header">
         <div className="container navigation">
-          <Link className="logo" href="/">
-            <span className="logo-icon">♡</span>
-            Arkadaş<span>Bul</span>
+
+          <Link
+            className="logo"
+            href="/"
+          >
+            <span className="logo-icon">
+              ♡
+            </span>
+
+            Arkadaş
+            <span>Bul</span>
           </Link>
 
-          <Link href="/" className="back-link">
+          <Link
+            href="/"
+            className="back-link"
+          >
             <ArrowLeft size={17} />
             Ana sayfaya dön
           </Link>
+
         </div>
       </header>
 
       <section className="container auth-container">
+
         <div className="auth-card profile-card">
+
           <div className="auth-icon">
             <User size={25} />
           </div>
 
           <div className="auth-heading">
+
             <div className="section-label">
               PROFİLİM
             </div>
 
-            <h1>Profil bilgilerin</h1>
+            <h1>
+              Profil bilgilerin
+            </h1>
 
             <p>
-              Bu bilgiler arkadaşlık ilanlarında
-              kullanılacaktır.
+              Profil bilgilerini
+              buradan düzenleyebilirsin.
             </p>
+
           </div>
 
           <div className="profile-email">
+
             <Mail size={17} />
-            <span>{user?.email}</span>
+
+            <span>
+              {user?.email}
+            </span>
+
           </div>
 
           <form
             onSubmit={handleSave}
             className="auth-form"
           >
+
             <div className="form-group">
+
               <label htmlFor="name">
                 Adın
               </label>
 
               <div className="auth-input">
+
                 <User size={18} />
 
                 <input
                   id="name"
                   type="text"
-                  placeholder="Adın"
                   value={name}
                   onChange={(event) =>
-                    setName(event.target.value)
+                    setName(
+                      event.target.value
+                    )
                   }
                   maxLength={50}
                   required
                 />
+
               </div>
+
             </div>
 
             <div className="profile-form-row">
+
               <div className="form-group">
+
                 <label htmlFor="age">
                   Yaş
                 </label>
 
                 <div className="auth-input">
+
                   <input
                     id="age"
                     type="number"
-                    placeholder="25"
                     min="18"
                     max="99"
                     value={age}
                     onChange={(event) =>
-                      setAge(event.target.value)
+                      setAge(
+                        event.target.value
+                      )
                     }
                     required
                   />
+
                 </div>
+
               </div>
 
               <div className="form-group">
+
                 <label htmlFor="gender">
                   Cinsiyet
                 </label>
 
                 <div className="auth-input">
+
                   <select
                     id="gender"
                     value={gender}
                     onChange={(event) =>
-                      setGender(event.target.value)
+                      setGender(
+                        event.target.value
+                      )
                     }
                     required
                   >
+
                     <option value="">
                       Seç
                     </option>
@@ -376,44 +496,59 @@ export default function ProfilePage() {
                     <option value="Belirtmek istemiyorum">
                       Belirtmek istemiyorum
                     </option>
+
                   </select>
+
                 </div>
+
               </div>
+
             </div>
 
             <div className="form-group">
+
               <label htmlFor="city">
                 Şehir
               </label>
 
               <div className="auth-input">
+
                 <MapPin size={18} />
 
                 <select
                   id="city"
                   value={city}
                   onChange={(event) =>
-                    setCity(event.target.value)
+                    setCity(
+                      event.target.value
+                    )
                   }
                   required
                 >
+
                   <option value="">
                     Şehir seç
                   </option>
 
-                  {cities.map((item) => (
-                    <option
-                      key={item}
-                      value={item}
-                    >
-                      {item}
-                    </option>
-                  ))}
+                  {cities.map(
+                    (item) => (
+                      <option
+                        key={item}
+                        value={item}
+                      >
+                        {item}
+                      </option>
+                    )
+                  )}
+
                 </select>
+
               </div>
+
             </div>
 
             <div className="form-group">
+
               <label htmlFor="bio">
                 Hakkında
               </label>
@@ -423,11 +558,14 @@ export default function ProfilePage() {
                 placeholder="Kendinden biraz bahset..."
                 value={bio}
                 onChange={(event) =>
-                  setBio(event.target.value)
+                  setBio(
+                    event.target.value
+                  )
                 }
                 maxLength={500}
                 rows={5}
               />
+
             </div>
 
             {error && (
@@ -447,12 +585,15 @@ export default function ProfilePage() {
               className="publish-button auth-submit"
               disabled={saving}
             >
+
               <Save size={18} />
 
               {saving
                 ? "Kaydediliyor..."
                 : "Profili Kaydet"}
+
             </button>
+
           </form>
 
           <button
@@ -460,10 +601,15 @@ export default function ProfilePage() {
             className="profile-logout"
             onClick={handleLogout}
           >
+
             <LogOut size={17} />
+
             Çıkış Yap
+
           </button>
+
         </div>
+
       </section>
     </main>
   );
