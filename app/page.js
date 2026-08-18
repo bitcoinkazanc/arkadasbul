@@ -174,10 +174,13 @@ export default function Home() {
             <a href="#nasil">Nasıl Çalışır?</a>
           </nav>
 
-          <button className="create-button">
+          <Link
+            href="/ilan-ver"
+            className="create-button"
+          >
             <Plus size={18} />
             İlan Ver
-          </button>
+          </Link>
         </div>
       </header>
 
