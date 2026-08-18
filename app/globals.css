@@ -1491,3 +1491,31 @@ footer {
   font-size: 14px;
   line-height: 1.7;
 }
+.account-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 42px;
+  padding: 0 16px;
+  border: 1px solid #ddd6d0;
+  border-radius: 10px;
+  background: #fff;
+  color: #403b37 !important;
+  text-decoration: none !important;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.account-button:hover {
+  background: #f8f5f2;
+  border-color: #cfc6bf;
+  color: #403b37 !important;
+  text-decoration: none !important;
+}
+
+.account-button svg {
+  flex-shrink: 0;
+}
