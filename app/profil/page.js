@@ -94,104 +94,120 @@ const cities = [
 ];
 
 export default function ProfilePage() {
+  const [loading, setLoading] = useState(true);
+
   const [user, setUser] = useState(null);
 
-  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({
+    name: "",
+    age: "",
+    gender: "",
+    city: "",
+    bio: "",
+    avatar_url: ""
+  });
+
   const [saving, setSaving] = useState(false);
-
-  const [name, setName] = useState("");
-  const [age, setAge] = useState("");
-  const [gender, setGender] = useState("");
-  const [city, setCity] = useState("");
-  const [bio, setBio] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
-
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
+    let mounted = true;
+
     async function loadProfile() {
       const supabase = createClient();
 
-      setLoading(true);
-      setError("");
+      try {
+        const {
+          data: {
+            user: currentUser
+          },
+          error: userError
+        } = await supabase.auth.getUser();
 
-      const {
-        data: {
-          session
-        },
-        error: sessionError
-      } = await supabase.auth.getSession();
+        if (userError) {
+          throw userError;
+        }
 
-      if (sessionError) {
-        setError(
-          "Oturum yüklenemedi: " +
-            sessionError.message
-        );
+        if (!currentUser) {
+          window.location.href = "/giris";
+          return;
+        }
 
-        setLoading(false);
-        return;
-      }
+        if (!mounted) {
+          return;
+        }
 
-      if (!session?.user) {
-        window.location.href = "/giris";
-        return;
-      }
+        setUser(currentUser);
 
-      setUser(session.user);
+        const {
+          data,
+          error: profileError
+        } = await supabase
+          .from("profiles")
+          .select(
+            "id, name, age, gender, city, bio, avatar_url"
+          )
+          .eq(
+            "id",
+            currentUser.id
+          )
+          .single();
 
-      const {
-        data,
-        error: profileError
-      } = await supabase
-        .from("profiles")
-        .select(
-          "id, name, age, gender, city, bio, avatar_url"
-        )
-        .eq(
-          "id",
-          session.user.id
-        )
-        .maybeSingle();
+        if (profileError) {
+          throw profileError;
+        }
 
-      if (profileError) {
+        if (!mounted) {
+          return;
+        }
+
+        setForm({
+          name: data?.name || "",
+          age:
+            data?.age !== null &&
+            data?.age !== undefined
+              ? String(data.age)
+              : "",
+          gender: data?.gender || "",
+          city: data?.city || "",
+          bio: data?.bio || "",
+          avatar_url:
+            data?.avatar_url || ""
+        });
+
+      } catch (err) {
         console.error(
-          "Profil okuma hatası:",
-          profileError
+          "Profil yükleme hatası:",
+          err
         );
 
-        setError(
-          "Profil bilgileri yüklenemedi: " +
-            profileError.message
-        );
-
-        setLoading(false);
-        return;
+        if (mounted) {
+          setError(
+            "Profil yüklenirken hata oluştu: " +
+              err.message
+          );
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
-
-      if (data) {
-        setName(data.name || "");
-
-        setAge(
-          data.age !== null &&
-          data.age !== undefined
-            ? String(data.age)
-            : ""
-        );
-
-        setGender(data.gender || "");
-        setCity(data.city || "");
-        setBio(data.bio || "");
-        setAvatarUrl(
-          data.avatar_url || ""
-        );
-      }
-
-      setLoading(false);
     }
 
     loadProfile();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
+
+  function updateField(field, value) {
+    setForm((previous) => ({
+      ...previous,
+      [field]: value
+    }));
+  }
 
   async function handleSave(event) {
     event.preventDefault();
@@ -204,49 +220,46 @@ export default function ProfilePage() {
       setError(
         "Kullanıcı oturumu bulunamadı."
       );
-
       setSaving(false);
       return;
     }
 
-    const ageNumber = Number(age);
+    const ageNumber = Number(
+      form.age
+    );
 
-    if (!name.trim()) {
+    if (!form.name.trim()) {
       setError(
         "Adını girmen gerekiyor."
       );
-
       setSaving(false);
       return;
     }
 
     if (
-      !age ||
+      !form.age ||
       ageNumber < 18 ||
       ageNumber > 99
     ) {
       setError(
         "Yaş 18 ile 99 arasında olmalıdır."
       );
-
       setSaving(false);
       return;
     }
 
-    if (!gender) {
+    if (!form.gender) {
       setError(
         "Cinsiyetini seçmen gerekiyor."
       );
-
       setSaving(false);
       return;
     }
 
-    if (!city) {
+    if (!form.city) {
       setError(
         "Şehrini seçmen gerekiyor."
       );
-
       setSaving(false);
       return;
     }
@@ -258,13 +271,13 @@ export default function ProfilePage() {
     } = await supabase
       .from("profiles")
       .update({
-        name: name.trim(),
+        name: form.name.trim(),
         age: ageNumber,
-        gender,
-        city,
-        bio: bio.trim(),
+        gender: form.gender,
+        city: form.city,
+        bio: form.bio.trim(),
         avatar_url:
-          avatarUrl.trim() || null
+          form.avatar_url.trim() || null
       })
       .eq(
         "id",
@@ -314,7 +327,7 @@ export default function ProfilePage() {
             </h1>
 
             <p>
-              Bilgilerin hazırlanıyor.
+              Profil bilgilerin getiriliyor.
             </p>
           </div>
         </section>
@@ -369,8 +382,8 @@ export default function ProfilePage() {
             </h1>
 
             <p>
-              Arkadaşlık profilini
-              buradan düzenleyebilirsin.
+              Profil bilgilerini buradan
+              düzenleyebilirsin.
             </p>
 
           </div>
@@ -379,9 +392,9 @@ export default function ProfilePage() {
 
             <div className="profile-avatar">
 
-              {avatarUrl ? (
+              {form.avatar_url ? (
                 <img
-                  src={avatarUrl}
+                  src={form.avatar_url}
                   alt="Profil fotoğrafı"
                 />
               ) : (
@@ -393,11 +406,11 @@ export default function ProfilePage() {
             <button
               type="button"
               className="profile-photo-button"
-              onClick={() => {
+              onClick={() =>
                 setMessage(
                   "Fotoğraf yükleme sistemi bir sonraki adımda aktif edilecek."
-                );
-              }}
+                )
+              }
             >
               <Camera size={17} />
               Profil fotoğrafı
@@ -433,9 +446,10 @@ export default function ProfilePage() {
                 <input
                   id="name"
                   type="text"
-                  value={name}
+                  value={form.name}
                   onChange={(event) =>
-                    setName(
+                    updateField(
+                      "name",
                       event.target.value
                     )
                   }
@@ -462,9 +476,10 @@ export default function ProfilePage() {
                     type="number"
                     min="18"
                     max="99"
-                    value={age}
+                    value={form.age}
                     onChange={(event) =>
-                      setAge(
+                      updateField(
+                        "age",
                         event.target.value
                       )
                     }
@@ -485,9 +500,10 @@ export default function ProfilePage() {
 
                   <select
                     id="gender"
-                    value={gender}
+                    value={form.gender}
                     onChange={(event) =>
-                      setGender(
+                      updateField(
+                        "gender",
                         event.target.value
                       )
                     }
@@ -530,9 +546,10 @@ export default function ProfilePage() {
 
                 <select
                   id="city"
-                  value={city}
+                  value={form.city}
                   onChange={(event) =>
-                    setCity(
+                    updateField(
+                      "city",
                       event.target.value
                     )
                   }
@@ -569,9 +586,10 @@ export default function ProfilePage() {
               <textarea
                 id="bio"
                 placeholder="Kendinden biraz bahset..."
-                value={bio}
+                value={form.bio}
                 onChange={(event) =>
-                  setBio(
+                  updateField(
+                    "bio",
                     event.target.value
                   )
                 }
