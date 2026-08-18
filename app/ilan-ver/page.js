@@ -117,7 +117,9 @@ export default function CreateListing() {
   function toggleInterest(interest) {
     setSelectedInterests((current) => {
       if (current.includes(interest)) {
-        return current.filter((item) => item !== interest);
+        return current.filter(
+          (item) => item !== interest
+        );
       }
 
       if (current.length >= 5) {
@@ -253,7 +255,11 @@ export default function CreateListing() {
                 <div className="form-group">
                   <label>Cinsiyet</label>
 
-                  <select name="gender" required defaultValue="">
+                  <select
+                    name="gender"
+                    required
+                    defaultValue=""
+                  >
                     <option value="" disabled>
                       Seç
                     </option>
