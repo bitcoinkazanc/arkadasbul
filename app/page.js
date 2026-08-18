@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import {
   Search,
   MapPin,
@@ -115,12 +117,17 @@ function ListingCard({ item }) {
           </div>
         </div>
 
-        <button className="favorite-button" aria-label="Favorilere ekle">
+        <button
+          className="favorite-button"
+          aria-label="Favorilere ekle"
+        >
           <Heart size={19} />
         </button>
       </div>
 
-      <p className="listing-text">{item.text}</p>
+      <p className="listing-text">
+        {item.text}
+      </p>
 
       <div className="tags">
         {item.tags.map((tag) => (
@@ -129,13 +136,24 @@ function ListingCard({ item }) {
       </div>
 
       <div className="listing-footer">
-        <span className={item.online ? "online-text" : "offline-text"}>
-          {item.online ? "● Çevrimiçi" : "Çevrimdışı"}
+        <span
+          className={
+            item.online
+              ? "online-text"
+              : "offline-text"
+          }
+        >
+          {item.online
+            ? "● Çevrimiçi"
+            : "Çevrimdışı"}
         </span>
 
-        <button className="profile-button">
+        <Link
+          href={`/ilan/${item.id}`}
+          className="profile-button"
+        >
           Profili Gör →
-        </button>
+        </Link>
       </div>
     </article>
   );
@@ -146,10 +164,10 @@ export default function Home() {
     <main>
       <header className="header">
         <div className="container navigation">
-          <a className="logo" href="/">
+          <Link className="logo" href="/">
             <span className="logo-icon">♡</span>
             Arkadaş<span>Bul</span>
-          </a>
+          </Link>
 
           <nav>
             <a href="#ilanlar">İlanlar</a>
@@ -218,24 +236,38 @@ export default function Home() {
           <div className="popular-tags">
             <span>Popüler:</span>
 
-            {["Oyun", "Kahve", "Gezi", "Spor", "Sinema"].map(
-              (tag) => (
-                <button key={tag}>{tag}</button>
-              )
-            )}
+            {[
+              "Oyun",
+              "Kahve",
+              "Gezi",
+              "Spor",
+              "Sinema"
+            ].map((tag) => (
+              <button key={tag}>
+                {tag}
+              </button>
+            ))}
           </div>
         </div>
       </section>
 
-      <section className="container listings-section" id="ilanlar">
+      <section
+        className="container listings-section"
+        id="ilanlar"
+      >
         <div className="section-header">
           <div>
-            <div className="section-label">KEŞFET</div>
+            <div className="section-label">
+              KEŞFET
+            </div>
 
-            <h2>Yeni arkadaşlık ilanları</h2>
+            <h2>
+              Yeni arkadaşlık ilanları
+            </h2>
 
             <p>
-              Sana uygun insanları keşfet ve yeni bağlantılar kur.
+              Sana uygun insanları keşfet ve yeni
+              bağlantılar kur.
             </p>
           </div>
 
@@ -258,9 +290,14 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="how-section" id="nasil">
+      <section
+        className="how-section"
+        id="nasil"
+      >
         <div className="container">
-          <div className="section-label">ÇOK KOLAY</div>
+          <div className="section-label">
+            ÇOK KOLAY
+          </div>
 
           <h2>
             Yeni bir arkadaşlık
@@ -275,8 +312,8 @@ export default function Home() {
               <h3>Keşfet</h3>
 
               <p>
-                Şehrini ve ilgi alanlarını seçerek sana uygun
-                ilanları bul.
+                Şehrini ve ilgi alanlarını seçerek
+                sana uygun ilanları bul.
               </p>
             </div>
 
@@ -286,8 +323,8 @@ export default function Home() {
               <h3>Tanış</h3>
 
               <p>
-                Profilleri incele, ortak noktalarınızı keşfet
-                ve iletişim kur.
+                Profilleri incele, ortak noktalarınızı
+                keşfet ve iletişim kur.
               </p>
             </div>
 
@@ -297,7 +334,8 @@ export default function Home() {
               <h3>Bağlan</h3>
 
               <p>
-                Yeni arkadaşlığını güzel anılara dönüştür.
+                Yeni arkadaşlığını güzel anılara
+                dönüştür.
               </p>
             </div>
           </div>
@@ -311,9 +349,13 @@ export default function Home() {
             Arkadaş<span>Bul</span>
           </div>
 
-          <p>Yeni arkadaşlıklar, gerçek bağlantılar.</p>
+          <p>
+            Yeni arkadaşlıklar, gerçek bağlantılar.
+          </p>
 
-          <small>© 2026 ArkadaşBul</small>
+          <small>
+            © 2026 ArkadaşBul
+          </small>
         </div>
       </footer>
     </main>
