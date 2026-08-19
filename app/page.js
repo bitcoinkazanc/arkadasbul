@@ -10,11 +10,52 @@ import {
   SlidersHorizontal,
   Sparkles,
   User,
-  LogOut
+  LogOut,
+  Mars,
+  Venus
 } from "lucide-react";
 
 import AdSlot from "./components/AdSlot";
 import { createClient } from "./lib/supabase/client";
+
+function GenderInfo({ gender }) {
+  if (!gender) return null;
+
+  const normalized = String(gender).toLowerCase();
+
+  const isMale =
+    normalized.includes("erkek") ||
+    normalized === "male";
+
+  const isFemale =
+    normalized.includes("kadın") ||
+    normalized.includes("kadin") ||
+    normalized === "female";
+
+  if (isMale) {
+    return (
+      <span className="gender-info">
+        <Mars size={14} />
+        Erkek
+      </span>
+    );
+  }
+
+  if (isFemale) {
+    return (
+      <span className="gender-info">
+        <Venus size={14} />
+        Kadın
+      </span>
+    );
+  }
+
+  return (
+    <span className="gender-info">
+      {gender}
+    </span>
+  );
+}
 
 function ListingCard({ item }) {
   const profile = item.profile || {};
@@ -22,18 +63,29 @@ function ListingCard({ item }) {
   const name = profile.name || "İsimsiz";
   const age = item.age || profile.age || "";
   const city = item.city || profile.city || "";
+
   const avatarUrl =
-    item.avatar_url || profile.avatar_url || "";
+    item.avatar_url ||
+    profile.avatar_url ||
+    "";
 
   const interests = Array.isArray(item.interests)
     ? item.interests
     : [];
 
+  const friendGender =
+    item.friend_gender || "Fark etmez";
+
+  const ageRange =
+    item.age_range || "";
+
   return (
     <article className="listing-card">
+
       <div className="listing-header">
 
         <div className="avatar-container">
+
           <div className="avatar">
             {avatarUrl ? (
               <img
@@ -46,9 +98,11 @@ function ListingCard({ item }) {
           </div>
 
           <span className="online-indicator" />
+
         </div>
 
         <div className="user-info">
+
           <h3>
             {name}
             {age ? `, ${age}` : ""}
@@ -58,6 +112,16 @@ function ListingCard({ item }) {
             <MapPin size={14} />
             {city}
           </div>
+
+          <div className="listing-gender">
+            <GenderInfo
+              gender={
+                item.gender ||
+                profile.gender
+              }
+            />
+          </div>
+
         </div>
 
         <button
@@ -69,18 +133,63 @@ function ListingCard({ item }) {
 
       </div>
 
+      <div className="listing-title">
+
+        <h4>
+          {item.title ||
+            "Yeni arkadaşlar arıyorum"}
+        </h4>
+
+      </div>
+
       <p className="listing-text">
         {item.bio ||
           "Arkadaşlık için yeni insanlarla tanışmak istiyorum."}
       </p>
 
-      <div className="tags">
-        {interests.slice(0, 5).map((tag) => (
-          <span key={tag}>
-            {tag}
+      {(friendGender || ageRange) && (
+        <div className="listing-looking">
+
+          <span className="looking-label">
+            Aradığı:
           </span>
-        ))}
-      </div>
+
+          {friendGender && (
+            <span className="looking-item">
+              {friendGender === "Erkek" && (
+                <Mars size={14} />
+              )}
+
+              {friendGender === "Kadın" && (
+                <Venus size={14} />
+              )}
+
+              {friendGender}
+            </span>
+          )}
+
+          {ageRange && (
+            <span className="looking-item">
+              {ageRange} yaş
+            </span>
+          )}
+
+        </div>
+      )}
+
+      {interests.length > 0 && (
+        <div className="tags">
+
+          {interests
+            .slice(0, 5)
+            .map((tag) => (
+              <span key={tag}>
+                {tag}
+              </span>
+            ))}
+
+        </div>
+      )}
 
       <div className="listing-footer">
 
@@ -96,6 +205,7 @@ function ListingCard({ item }) {
         </Link>
 
       </div>
+
     </article>
   );
 }
@@ -105,7 +215,8 @@ export default function Home() {
 
   const [listings, setListings] = useState([]);
   const [user, setUser] = useState(null);
-  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [checkingAuth, setCheckingAuth] =
+    useState(true);
   const [loadingListings, setLoadingListings] =
     useState(true);
 
@@ -113,6 +224,7 @@ export default function Home() {
     let mounted = true;
 
     async function loadPage() {
+
       const {
         data: {
           user: currentUser
@@ -135,6 +247,7 @@ export default function Home() {
         });
 
       if (listingError) {
+
         console.error(
           "İlanlar alınamadı:",
           listingError
@@ -153,7 +266,10 @@ export default function Home() {
       const userIds = [
         ...new Set(
           rows
-            .map((listing) => listing.user_id)
+            .map(
+              (listing) =>
+                listing.user_id
+            )
             .filter(Boolean)
         )
       ];
@@ -161,6 +277,7 @@ export default function Home() {
       let profiles = [];
 
       if (userIds.length > 0) {
+
         const {
           data: profileData,
           error: profileError
@@ -172,31 +289,42 @@ export default function Home() {
           .in("id", userIds);
 
         if (profileError) {
+
           console.error(
             "Profiller alınamadı:",
             profileError
           );
+
         } else {
-          profiles = profileData || [];
+
+          profiles =
+            profileData || [];
+
         }
       }
 
       const profileMap = {};
 
       profiles.forEach((profile) => {
-        profileMap[profile.id] = profile;
+        profileMap[profile.id] =
+          profile;
       });
 
-      const combinedListings = rows.map(
-        (listing) => ({
+      const combinedListings =
+        rows.map((listing) => ({
           ...listing,
+
           profile:
-            profileMap[listing.user_id] || null
-        })
-      );
+            profileMap[
+              listing.user_id
+            ] || null
+        }));
 
       if (mounted) {
-        setListings(combinedListings);
+        setListings(
+          combinedListings
+        );
+
         setLoadingListings(false);
       }
     }
@@ -207,22 +335,31 @@ export default function Home() {
       data: {
         subscription
       }
-    } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (mounted) {
-          setUser(session?.user ?? null);
-          setCheckingAuth(false);
+    } =
+      supabase.auth.onAuthStateChange(
+        (_event, session) => {
+
+          if (mounted) {
+            setUser(
+              session?.user ?? null
+            );
+
+            setCheckingAuth(false);
+          }
         }
-      }
-    );
+      );
 
     return () => {
+
       mounted = false;
+
       subscription.unsubscribe();
     };
+
   }, [supabase]);
 
   async function handleLogout() {
+
     await supabase.auth.signOut();
 
     window.location.href = "/";
@@ -230,7 +367,9 @@ export default function Home() {
 
   return (
     <main>
+
       <header className="header">
+
         <div className="container navigation">
 
           <Link
@@ -241,10 +380,12 @@ export default function Home() {
               ♡
             </span>
 
-            Arkadaş<span>Bul</span>
+            Arkadaş
+            <span>Bul</span>
           </Link>
 
           <nav>
+
             <a href="#ilanlar">
               İlanlar
             </a>
@@ -252,6 +393,7 @@ export default function Home() {
             <a href="#nasil">
               Nasıl Çalışır?
             </a>
+
           </nav>
 
           <div className="header-actions">
@@ -306,10 +448,13 @@ export default function Home() {
                 )}
 
           </div>
+
         </div>
+
       </header>
 
       <section className="hero">
+
         <div className="hero-background one" />
         <div className="hero-background two" />
 
@@ -347,9 +492,11 @@ export default function Home() {
             </div>
 
             <div className="city-input">
+
               <MapPin size={19} />
 
               <select defaultValue="">
+
                 <option
                   value=""
                   disabled
@@ -376,7 +523,9 @@ export default function Home() {
                 <option>
                   Batman
                 </option>
+
               </select>
+
             </div>
 
             <button className="search-button">
@@ -386,6 +535,7 @@ export default function Home() {
           </div>
 
           <div className="popular-tags">
+
             <span>
               Popüler:
             </span>
@@ -401,9 +551,11 @@ export default function Home() {
                 {tag}
               </button>
             ))}
+
           </div>
 
         </div>
+
       </section>
 
       <section
@@ -424,32 +576,41 @@ export default function Home() {
             </h2>
 
             <p>
-              Sana uygun insanları keşfet ve yeni
-              bağlantılar kur.
+              Sana uygun insanları keşfet
+              ve yeni bağlantılar kur.
             </p>
 
           </div>
 
           <button className="filter-button">
+
             <SlidersHorizontal size={17} />
+
             Filtrele
+
           </button>
 
         </div>
 
         {loadingListings ? (
+
           <div className="empty-state">
             İlanlar yükleniyor...
           </div>
+
         ) : listings.length === 0 ? (
+
           <div className="empty-state">
             Henüz ilan bulunmuyor.
           </div>
+
         ) : (
+
           <div className="listing-grid">
 
             {listings.map(
               (item, index) => (
+
                 <div key={item.id}>
 
                   <ListingCard
@@ -457,14 +618,18 @@ export default function Home() {
                   />
 
                   {(index + 1) % 4 === 0 && (
-                    <AdSlot size="medium" />
+                    <AdSlot
+                      size="medium"
+                    />
                   )}
 
                 </div>
+
               )
             )}
 
           </div>
+
         )}
 
       </section>
@@ -473,6 +638,7 @@ export default function Home() {
         className="how-section"
         id="nasil"
       >
+
         <div className="container">
 
           <div className="section-label">
@@ -488,7 +654,10 @@ export default function Home() {
           <div className="steps">
 
             <div className="step">
-              <span>01</span>
+
+              <span>
+                01
+              </span>
 
               <h3>
                 Keşfet
@@ -498,10 +667,14 @@ export default function Home() {
                 Şehrini ve ilgi alanlarını
                 seçerek sana uygun ilanları bul.
               </p>
+
             </div>
 
             <div className="step">
-              <span>02</span>
+
+              <span>
+                02
+              </span>
 
               <h3>
                 Tanış
@@ -511,10 +684,14 @@ export default function Home() {
                 Profilleri incele, ortak
                 noktalarınızı keşfet ve iletişim kur.
               </p>
+
             </div>
 
             <div className="step">
-              <span>03</span>
+
+              <span>
+                03
+              </span>
 
               <h3>
                 Bağlan
@@ -524,21 +701,28 @@ export default function Home() {
                 Yeni arkadaşlığını güzel
                 anılara dönüştür.
               </p>
+
             </div>
 
           </div>
+
         </div>
+
       </section>
 
       <footer>
+
         <div className="container footer">
 
           <div className="logo">
+
             <span className="logo-icon">
               ♡
             </span>
 
-            Arkadaş<span>Bul</span>
+            Arkadaş
+            <span>Bul</span>
+
           </div>
 
           <p>
@@ -551,7 +735,9 @@ export default function Home() {
           </small>
 
         </div>
+
       </footer>
+
     </main>
   );
 }
