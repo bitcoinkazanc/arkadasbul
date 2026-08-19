@@ -10,9 +10,7 @@ import {
   SlidersHorizontal,
   Sparkles,
   User,
-  LogOut,
-  Mars,
-  Venus
+  LogOut
 } from "lucide-react";
 
 import AdSlot from "./components/AdSlot";
@@ -23,28 +21,26 @@ function GenderInfo({ gender }) {
 
   const normalized = String(gender).toLowerCase();
 
-  const isMale =
+  if (
     normalized.includes("erkek") ||
-    normalized === "male";
-
-  const isFemale =
-    normalized.includes("kadın") ||
-    normalized.includes("kadin") ||
-    normalized === "female";
-
-  if (isMale) {
+    normalized === "male"
+  ) {
     return (
       <span className="gender-info">
-        <Mars size={14} />
+        <span>♂</span>
         Erkek
       </span>
     );
   }
 
-  if (isFemale) {
+  if (
+    normalized.includes("kadın") ||
+    normalized.includes("kadin") ||
+    normalized === "female"
+  ) {
     return (
       <span className="gender-info">
-        <Venus size={14} />
+        <span>♀</span>
         Kadın
       </span>
     );
@@ -52,6 +48,43 @@ function GenderInfo({ gender }) {
 
   return (
     <span className="gender-info">
+      {gender}
+    </span>
+  );
+}
+
+function LookingGender({ gender }) {
+  if (!gender) return null;
+
+  const normalized = String(gender).toLowerCase();
+
+  if (
+    normalized.includes("erkek") ||
+    normalized === "male"
+  ) {
+    return (
+      <span className="looking-item">
+        <span>♂</span>
+        Erkek
+      </span>
+    );
+  }
+
+  if (
+    normalized.includes("kadın") ||
+    normalized.includes("kadin") ||
+    normalized === "female"
+  ) {
+    return (
+      <span className="looking-item">
+        <span>♀</span>
+        Kadın
+      </span>
+    );
+  }
+
+  return (
+    <span className="looking-item">
       {gender}
     </span>
   );
@@ -73,11 +106,18 @@ function ListingCard({ item }) {
     ? item.interests
     : [];
 
+  const gender =
+    item.gender ||
+    profile.gender ||
+    "";
+
   const friendGender =
-    item.friend_gender || "Fark etmez";
+    item.friend_gender ||
+    "Fark etmez";
 
   const ageRange =
-    item.age_range || "";
+    item.age_range ||
+    "";
 
   return (
     <article className="listing-card">
@@ -87,6 +127,7 @@ function ListingCard({ item }) {
         <div className="avatar-container">
 
           <div className="avatar">
+
             {avatarUrl ? (
               <img
                 src={avatarUrl}
@@ -95,6 +136,7 @@ function ListingCard({ item }) {
             ) : (
               name.charAt(0).toUpperCase()
             )}
+
           </div>
 
           <span className="online-indicator" />
@@ -113,14 +155,9 @@ function ListingCard({ item }) {
             {city}
           </div>
 
-          <div className="listing-gender">
-            <GenderInfo
-              gender={
-                item.gender ||
-                profile.gender
-              }
-            />
-          </div>
+          <GenderInfo
+            gender={gender}
+          />
 
         </div>
 
@@ -147,35 +184,23 @@ function ListingCard({ item }) {
           "Arkadaşlık için yeni insanlarla tanışmak istiyorum."}
       </p>
 
-      {(friendGender || ageRange) && (
-        <div className="listing-looking">
+      <div className="listing-looking">
 
-          <span className="looking-label">
-            Aradığı:
+        <span className="looking-label">
+          Aradığı:
+        </span>
+
+        <LookingGender
+          gender={friendGender}
+        />
+
+        {ageRange && (
+          <span className="looking-item">
+            {ageRange} yaş
           </span>
+        )}
 
-          {friendGender && (
-            <span className="looking-item">
-              {friendGender === "Erkek" && (
-                <Mars size={14} />
-              )}
-
-              {friendGender === "Kadın" && (
-                <Venus size={14} />
-              )}
-
-              {friendGender}
-            </span>
-          )}
-
-          {ageRange && (
-            <span className="looking-item">
-              {ageRange} yaş
-            </span>
-          )}
-
-        </div>
-      )}
+      </div>
 
       {interests.length > 0 && (
         <div className="tags">
@@ -224,108 +249,109 @@ export default function Home() {
     let mounted = true;
 
     async function loadPage() {
-
-      const {
-        data: {
-          user: currentUser
-        }
-      } = await supabase.auth.getUser();
-
-      if (mounted) {
-        setUser(currentUser);
-        setCheckingAuth(false);
-      }
-
-      const {
-        data: listingData,
-        error: listingError
-      } = await supabase
-        .from("listings")
-        .select("*")
-        .order("created_at", {
-          ascending: false
-        });
-
-      if (listingError) {
-
-        console.error(
-          "İlanlar alınamadı:",
-          listingError
-        );
+      try {
+        const {
+          data: {
+            user: currentUser
+          }
+        } = await supabase.auth.getUser();
 
         if (mounted) {
-          setListings([]);
-          setLoadingListings(false);
+          setUser(currentUser || null);
+          setCheckingAuth(false);
         }
-
-        return;
-      }
-
-      const rows = listingData || [];
-
-      const userIds = [
-        ...new Set(
-          rows
-            .map(
-              (listing) =>
-                listing.user_id
-            )
-            .filter(Boolean)
-        )
-      ];
-
-      let profiles = [];
-
-      if (userIds.length > 0) {
 
         const {
-          data: profileData,
-          error: profileError
+          data: listingData,
+          error: listingError
         } = await supabase
-          .from("profiles")
-          .select(
-            "id, name, age, gender, city, avatar_url"
-          )
-          .in("id", userIds);
+          .from("listings")
+          .select("*")
+          .order("created_at", {
+            ascending: false
+          });
 
-        if (profileError) {
-
+        if (listingError) {
           console.error(
-            "Profiller alınamadı:",
-            profileError
+            "İlanlar alınamadı:",
+            listingError
           );
 
-        } else {
+          if (mounted) {
+            setListings([]);
+          }
 
-          profiles =
-            profileData || [];
-
+          return;
         }
-      }
 
-      const profileMap = {};
+        const rows = listingData || [];
 
-      profiles.forEach((profile) => {
-        profileMap[profile.id] =
-          profile;
-      });
+        const userIds = [
+          ...new Set(
+            rows
+              .map(
+                (listing) =>
+                  listing.user_id
+              )
+              .filter(Boolean)
+          )
+        ];
 
-      const combinedListings =
-        rows.map((listing) => ({
-          ...listing,
+        let profiles = [];
 
-          profile:
-            profileMap[
-              listing.user_id
-            ] || null
-        }));
+        if (userIds.length > 0) {
+          const {
+            data: profileData,
+            error: profileError
+          } = await supabase
+            .from("profiles")
+            .select(
+              "id, name, age, gender, city, avatar_url"
+            )
+            .in("id", userIds);
 
-      if (mounted) {
-        setListings(
-          combinedListings
+          if (profileError) {
+            console.error(
+              "Profiller alınamadı:",
+              profileError
+            );
+          } else {
+            profiles =
+              profileData || [];
+          }
+        }
+
+        const profileMap = {};
+
+        profiles.forEach((profile) => {
+          profileMap[profile.id] =
+            profile;
+        });
+
+        const combinedListings =
+          rows.map((listing) => ({
+            ...listing,
+            profile:
+              profileMap[
+                listing.user_id
+              ] || null
+          }));
+
+        if (mounted) {
+          setListings(
+            combinedListings
+          );
+        }
+
+      } catch (error) {
+        console.error(
+          "Ana sayfa hatası:",
+          error
         );
-
-        setLoadingListings(false);
+      } finally {
+        if (mounted) {
+          setLoadingListings(false);
+        }
       }
     }
 
@@ -338,10 +364,9 @@ export default function Home() {
     } =
       supabase.auth.onAuthStateChange(
         (_event, session) => {
-
           if (mounted) {
             setUser(
-              session?.user ?? null
+              session?.user || null
             );
 
             setCheckingAuth(false);
@@ -350,16 +375,12 @@ export default function Home() {
       );
 
     return () => {
-
       mounted = false;
-
       subscription.unsubscribe();
     };
-
   }, [supabase]);
 
   async function handleLogout() {
-
     await supabase.auth.signOut();
 
     window.location.href = "/";
@@ -476,8 +497,8 @@ export default function Home() {
           <p>
             Ortak ilgi alanlarına sahip
             insanları keşfet,
-            arkadaşlık ilanlarını incele
-            ve yeni bağlantılar kur.
+            arkadaşlık ilanlarını incele ve
+            yeni bağlantılar kur.
           </p>
 
           <div className="search-panel">
