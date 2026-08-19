@@ -7,7 +7,6 @@ import {
   MapPin,
   User,
   Heart,
-  Users,
   ShieldCheck,
   ArrowRight,
   LogOut
@@ -149,10 +148,6 @@ export default function HomePage() {
 
         const listingRows = listingsData || [];
 
-        /*
-         * İlanların sahibi profiles tablosunda tutuluyor.
-         * Her ilan için user_id üzerinden profil bilgilerini alıyoruz.
-         */
         const userIds = [
           ...new Set(
             listingRows
@@ -190,12 +185,13 @@ export default function HomePage() {
           profileMap[profile.id] = profile;
         });
 
-        const combinedListings =
-          listingRows.map((listing) => ({
+        const combinedListings = listingRows.map(
+          (listing) => ({
             ...listing,
             profile:
               profileMap[listing.user_id] || null
-          }));
+          })
+        );
 
         setListings(combinedListings);
 
@@ -289,7 +285,6 @@ export default function HomePage() {
 
       </header>
 
-
       <section className="hero">
 
         <div className="container hero-content">
@@ -333,7 +328,6 @@ export default function HomePage() {
 
       </section>
 
-
       <section
         className="search-section"
         id="ilanlar"
@@ -367,7 +361,6 @@ export default function HomePage() {
 
       </section>
 
-
       <section className="listings-section">
 
         <div className="container">
@@ -392,7 +385,6 @@ export default function HomePage() {
 
           </div>
 
-
           {loading && (
             <div className="empty-state">
               <p>
@@ -401,7 +393,6 @@ export default function HomePage() {
             </div>
           )}
 
-
           {!loading && error && (
             <div className="empty-state">
               <p>
@@ -409,7 +400,6 @@ export default function HomePage() {
               </p>
             </div>
           )}
-
 
           {!loading &&
             !error &&
@@ -436,7 +426,6 @@ export default function HomePage() {
               </div>
             )}
 
-
           {!loading &&
             !error &&
             listings.length > 0 && (
@@ -453,14 +442,11 @@ export default function HomePage() {
                         item={item}
                       />
 
-                      {(index + 1) % 4 ===
-                        0 && (
+                      {(index + 1) % 4 === 0 && (
                         <div
                           style={{
-                            marginTop:
-                              "20px",
-                            marginBottom:
-                              "20px"
+                            marginTop: "20px",
+                            marginBottom: "20px"
                           }}
                         >
                           <AdSlot />
@@ -478,7 +464,6 @@ export default function HomePage() {
         </div>
 
       </section>
-
 
       <section className="popular-section">
 
@@ -513,7 +498,6 @@ export default function HomePage() {
 
       </section>
 
-
       <section className="how-section">
 
         <div className="container">
@@ -533,7 +517,6 @@ export default function HomePage() {
             </div>
 
           </div>
-
 
           <div className="steps-grid">
 
@@ -558,7 +541,6 @@ export default function HomePage() {
 
             </div>
 
-
             <div className="step-card">
 
               <div className="step-icon">
@@ -580,7 +562,6 @@ export default function HomePage() {
               </p>
 
             </div>
-
 
             <div className="step-card">
 
@@ -608,7 +589,6 @@ export default function HomePage() {
         </div>
 
       </section>
-
 
       <footer className="footer">
 
