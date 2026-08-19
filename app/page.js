@@ -16,102 +16,36 @@ import {
 import AdSlot from "./components/AdSlot";
 import { createClient } from "./lib/supabase/client";
 
-const listings = [
-  {
-    id: 1,
-    name: "Mert",
-    age: 24,
-    city: "Mardin",
-    avatar: "M",
-    online: true,
-    tags: ["Oyun", "Müzik", "Kahve"],
-    text: "Akşamları beraber oyun oynayabileceğim ve sohbet edebileceğim yeni arkadaşlar arıyorum."
-  },
-  {
-    id: 2,
-    name: "Elif",
-    age: 22,
-    city: "Diyarbakır",
-    avatar: "E",
-    online: true,
-    tags: ["Sinema", "Kitap", "Gezi"],
-    text: "Hafta sonları yeni yerler keşfetmek ve güzel sohbetler etmek isteyen arkadaşlar arıyorum."
-  },
-  {
-    id: 3,
-    name: "Can",
-    age: 27,
-    city: "Gaziantep",
-    avatar: "C",
-    online: false,
-    tags: ["Spor", "Futbol", "Kahve"],
-    text: "Spor yapmayı ve maç izlemeyi seven kafa dengi insanlarla tanışmak istiyorum."
-  },
-  {
-    id: 4,
-    name: "Zeynep",
-    age: 25,
-    city: "Şanlıurfa",
-    avatar: "Z",
-    online: true,
-    tags: ["Müzik", "Fotoğraf", "Gezi"],
-    text: "Yeni insanlarla tanışıp birlikte fotoğraf çekebileceğim arkadaşlar arıyorum."
-  },
-  {
-    id: 5,
-    name: "Emre",
-    age: 29,
-    city: "Mardin",
-    avatar: "E",
-    online: false,
-    tags: ["Teknoloji", "Oyun", "Film"],
-    text: "Teknoloji ve oyun konuşmayı seven arkadaşlarla tanışmak istiyorum."
-  },
-  {
-    id: 6,
-    name: "Derya",
-    age: 23,
-    city: "Batman",
-    avatar: "D",
-    online: true,
-    tags: ["Dans", "Müzik", "Kahve"],
-    text: "Enerjisi yüksek, birlikte etkinliklere katılabileceğim yeni arkadaşlar arıyorum."
-  },
-  {
-    id: 7,
-    name: "Burak",
-    age: 26,
-    city: "Mardin",
-    avatar: "B",
-    online: true,
-    tags: ["Oyun", "Teknoloji", "Film"],
-    text: "Oyun oynamayı ve teknoloji hakkında konuşmayı seven insanlarla tanışmak istiyorum."
-  },
-  {
-    id: 8,
-    name: "Sena",
-    age: 21,
-    city: "Diyarbakır",
-    avatar: "S",
-    online: false,
-    tags: ["Kahve", "Gezi", "Müzik"],
-    text: "Kahve içip sohbet edebileceğim ve yeni yerler keşfedebileceğim arkadaşlar arıyorum."
-  }
-];
-
 function ListingCard({ item }) {
+  const avatarLetter =
+    item.name?.trim()?.charAt(0)?.toUpperCase() || "?";
+
+  const interests = Array.isArray(item.interests)
+    ? item.interests
+    : [];
+
   return (
     <article className="listing-card">
       <div className="listing-header">
         <div className="avatar-container">
-          <div className="avatar">{item.avatar}</div>
+          {item.avatar_url ? (
+            <img
+              src={item.avatar_url}
+              alt={item.name || "Kullanıcı"}
+              className="avatar"
+            />
+          ) : (
+            <div className="avatar">
+              {avatarLetter}
+            </div>
+          )}
 
-          {item.online && <span className="online-indicator" />}
+          <span className="online-indicator" />
         </div>
 
         <div className="user-info">
           <h3>
-            {item.name}, {item.age}
+            {item.name || "İsimsiz"}, {item.age}
           </h3>
 
           <div className="location">
@@ -121,6 +55,7 @@ function ListingCard({ item }) {
         </div>
 
         <button
+          type="button"
           className="favorite-button"
           aria-label="Favorilere ekle"
         >
@@ -129,26 +64,20 @@ function ListingCard({ item }) {
       </div>
 
       <p className="listing-text">
-        {item.text}
+        {item.bio}
       </p>
 
-      <div className="tags">
-        {item.tags.map((tag) => (
-          <span key={tag}>{tag}</span>
-        ))}
-      </div>
+      {interests.length > 0 && (
+        <div className="tags">
+          {interests.slice(0, 6).map((tag) => (
+            <span key={tag}>{tag}</span>
+          ))}
+        </div>
+      )}
 
       <div className="listing-footer">
-        <span
-          className={
-            item.online
-              ? "online-text"
-              : "offline-text"
-          }
-        >
-          {item.online
-            ? "● Çevrimiçi"
-            : "Çevrimdışı"}
+        <span className="online-text">
+          ● Aktif
         </span>
 
         <Link
@@ -167,6 +96,10 @@ export default function Home() {
 
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
+
+  const [listings, setListings] = useState([]);
+  const [loadingListings, setLoadingListings] = useState(true);
+  const [listingError, setListingError] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -196,6 +129,42 @@ export default function Home() {
     return () => {
       mounted = false;
       subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadListings() {
+      setLoadingListings(true);
+      setListingError("");
+
+      const { data, error } = await supabase
+        .from("listings")
+        .select("*")
+        .order("created_at", {
+          ascending: false
+        });
+
+      if (!mounted) return;
+
+      if (error) {
+        console.error("İlanlar yüklenemedi:", error);
+        setListingError(
+          "İlanlar yüklenirken bir hata oluştu."
+        );
+        setListings([]);
+      } else {
+        setListings(data || []);
+      }
+
+      setLoadingListings(false);
+    }
+
+    loadListings();
+
+    return () => {
+      mounted = false;
     };
   }, [supabase]);
 
@@ -315,7 +284,10 @@ export default function Home() {
               </select>
             </div>
 
-            <button className="search-button">
+            <button
+              type="button"
+              className="search-button"
+            >
               İlanları Bul
             </button>
           </div>
@@ -330,7 +302,10 @@ export default function Home() {
               "Spor",
               "Sinema"
             ].map((tag) => (
-              <button key={tag}>
+              <button
+                key={tag}
+                type="button"
+              >
                 {tag}
               </button>
             ))}
@@ -358,23 +333,49 @@ export default function Home() {
             </p>
           </div>
 
-          <button className="filter-button">
+          <button
+            type="button"
+            className="filter-button"
+          >
             <SlidersHorizontal size={17} />
             Filtrele
           </button>
         </div>
 
-        <div className="listing-grid">
-          {listings.map((item, index) => (
-            <div key={item.id}>
-              <ListingCard item={item} />
+        {loadingListings ? (
+          <div className="empty-state">
+            <p>İlanlar yükleniyor...</p>
+          </div>
+        ) : listingError ? (
+          <div className="empty-state">
+            <p>{listingError}</p>
+          </div>
+        ) : listings.length === 0 ? (
+          <div className="empty-state">
+            <p>
+              Henüz yayınlanmış bir ilan bulunmuyor.
+            </p>
 
-              {(index + 1) % 4 === 0 && (
-                <AdSlot size="medium" />
-              )}
-            </div>
-          ))}
-        </div>
+            <Link
+              href="/ilan-ver"
+              className="profile-button"
+            >
+              İlk İlanı Ver →
+            </Link>
+          </div>
+        ) : (
+          <div className="listing-grid">
+            {listings.map((item, index) => (
+              <div key={item.id}>
+                <ListingCard item={item} />
+
+                {(index + 1) % 4 === 0 && (
+                  <AdSlot size="medium" />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section
