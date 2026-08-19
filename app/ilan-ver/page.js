@@ -1,30 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
   ArrowLeft,
-  Camera,
   MapPin,
   User,
+  Users,
+  Calendar,
   Heart,
-  Check
+  Sparkles
 } from "lucide-react";
-import { useState } from "react";
-
-const interests = [
-  "Oyun",
-  "Müzik",
-  "Kahve",
-  "Gezi",
-  "Sinema",
-  "Kitap",
-  "Spor",
-  "Futbol",
-  "Teknoloji",
-  "Fotoğraf",
-  "Dans",
-  "Film"
-];
+import { useRouter } from "next/navigation";
+import { createClient } from "../lib/supabase/client";
 
 const cities = [
   "Adana",
@@ -35,11 +23,9 @@ const cities = [
   "Amasya",
   "Ankara",
   "Antalya",
-  "Ardahan",
   "Artvin",
   "Aydın",
   "Balıkesir",
-  "Bartın",
   "Batman",
   "Bayburt",
   "Bilecik",
@@ -110,19 +96,115 @@ const cities = [
   "Zonguldak"
 ];
 
-export default function CreateListing() {
+const interests = [
+  "Oyun",
+  "Müzik",
+  "Kahve",
+  "Sinema",
+  "Kitap",
+  "Gezi",
+  "Spor",
+  "Futbol",
+  "Teknoloji",
+  "Fotoğraf",
+  "Dans",
+  "Film"
+];
+
+const initialForm = {
+  title: "",
+  city: "",
+  age: "",
+  gender: "",
+  friend_gender: "Fark etmez",
+  age_range: "18-25",
+  bio: ""
+};
+
+export default function CreateListingPage() {
+  const router = useRouter();
+  const supabase = createClient();
+
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [form, setForm] = useState(initialForm);
   const [selectedInterests, setSelectedInterests] = useState([]);
-  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadData() {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.replace("/giris");
+        return;
+      }
+
+      const { data: profileData, error: profileError } =
+        await supabase
+          .from("profiles")
+          .select(
+            "id, name, age, gender, city, avatar_url, bio"
+          )
+          .eq("id", user.id)
+          .maybeSingle();
+
+      if (!mounted) {
+        return;
+      }
+
+      if (profileError) {
+        setError(
+          "Profil bilgilerin alınırken bir hata oluştu."
+        );
+        setLoading(false);
+        return;
+      }
+
+      setUser(user);
+      setProfile(profileData);
+
+      if (profileData) {
+        setForm((current) => ({
+          ...current,
+          city: profileData.city || "",
+          age: profileData.age
+            ? String(profileData.age)
+            : "",
+          gender: profileData.gender || ""
+        }));
+      }
+
+      setLoading(false);
+    }
+
+    loadData();
+
+    return () => {
+      mounted = false;
+    };
+  }, [router, supabase]);
+
+  function updateField(field, value) {
+    setForm((current) => ({
+      ...current,
+      [field]: value
+    }));
+  }
 
   function toggleInterest(interest) {
     setSelectedInterests((current) => {
       if (current.includes(interest)) {
-        return current.filter(
-          (item) => item !== interest
-        );
+        return current.filter((item) => item !== interest);
       }
 
-      if (current.length >= 5) {
+      if (current.length >= 6) {
         return current;
       }
 
@@ -130,9 +212,110 @@ export default function CreateListing() {
     });
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    setSubmitted(true);
+
+    if (!user) {
+      router.replace("/giris");
+      return;
+    }
+
+    setError("");
+
+    if (!profile) {
+      setError(
+        "Önce profil bilgilerini tamamlaman gerekiyor."
+      );
+      return;
+    }
+
+    if (!form.title.trim()) {
+      setError("İlan başlığını yaz.");
+      return;
+    }
+
+    if (!form.city) {
+      setError("Şehir seç.");
+      return;
+    }
+
+    if (!form.age) {
+      setError("Yaşını gir.");
+      return;
+    }
+
+    if (!form.gender) {
+      setError("Cinsiyetini seç.");
+      return;
+    }
+
+    if (!form.bio.trim()) {
+      setError("İlan açıklamasını yaz.");
+      return;
+    }
+
+    if (selectedInterests.length === 0) {
+      setError("En az bir ilgi alanı seç.");
+      return;
+    }
+
+    const age = Number(form.age);
+
+    if (age < 18 || age > 99) {
+      setError("Yaş 18 ile 99 arasında olmalıdır.");
+      return;
+    }
+
+    setSaving(true);
+
+    const { data, error: insertError } = await supabase
+      .from("listings")
+      .insert({
+        user_id: user.id,
+        title: form.title.trim(),
+        bio: form.bio.trim(),
+        city: form.city,
+        age,
+        gender: form.gender,
+        friend_gender: form.friend_gender,
+        age_range: form.age_range,
+        interests: selectedInterests,
+        avatar_url: profile.avatar_url || null
+      })
+      .select("id")
+      .single();
+
+    if (insertError) {
+      setError(
+        insertError.message ||
+          "İlan oluşturulurken bir hata oluştu."
+      );
+      setSaving(false);
+      return;
+    }
+
+    router.push(`/ilan/${data.id}`);
+  }
+
+  if (loading) {
+    return (
+      <main className="create-page">
+        <header className="header">
+          <div className="container navigation">
+            <Link className="logo" href="/">
+              <span className="logo-icon">♡</span>
+              Arkadaş<span>Bul</span>
+            </Link>
+          </div>
+        </header>
+
+        <section className="container create-container">
+          <div className="create-card">
+            <p>İlan formu hazırlanıyor...</p>
+          </div>
+        </section>
+      </main>
+    );
   }
 
   return (
@@ -154,332 +337,283 @@ export default function CreateListing() {
       <section className="container create-container">
         <div className="create-heading">
           <div className="section-label">
-            YENİ İLAN
+            ARKADAŞ BUL
           </div>
 
-          <h1>
-            Kendini tanıt,
-            <br />
-            yeni arkadaşlıklar kur.
-          </h1>
+          <h1>Arkadaşlık ilanını oluştur</h1>
 
           <p>
-            İlgi alanlarını ve kendini anlat. Sana uygun
-            insanlarla bağlantı kurmaya başla.
+            Kendini ve aradığın arkadaşlığı anlat.
+            İlanın yayınlandıktan sonra diğer kullanıcılar
+            tarafından görüntülenebilir.
           </p>
         </div>
 
-        {submitted ? (
-          <div className="success-card">
-            <div className="success-icon">
-              <Check size={30} />
-            </div>
-
-            <h2>İlanın hazır!</h2>
-
-            <p>
-              İlan oluşturma formun başarıyla gönderildi.
-              Gerçek yayınlama ve hesap sistemi bir sonraki
-              aşamada bağlanacak.
-            </p>
-
-            <Link href="/" className="success-button">
-              İlanlara dön
-            </Link>
-          </div>
-        ) : (
-          <form
-            className="create-form"
-            onSubmit={handleSubmit}
-          >
-            <div className="form-card">
-              <div className="form-card-header">
-                <div>
-                  <h2>Temel bilgiler</h2>
-
-                  <p>
-                    Profilinde görünecek bilgileri gir.
-                  </p>
-                </div>
-
-                <User size={22} />
+        <form
+          className="create-form"
+          onSubmit={handleSubmit}
+        >
+          <div className="create-card">
+            <div className="create-card-heading">
+              <div className="create-card-icon">
+                <Heart size={20} />
               </div>
 
-              <div className="photo-upload">
-                <div className="photo-placeholder">
-                  <Camera size={27} />
-                </div>
+              <div>
+                <h2>İlan bilgileri</h2>
 
-                <div>
-                  <strong>Profil fotoğrafı</strong>
-
-                  <p>
-                    Net ve sana ait bir fotoğraf
-                    kullanmanı öneriyoruz.
-                  </p>
-
-                  <button
-                    type="button"
-                    className="upload-button"
-                  >
-                    Fotoğraf seç
-                  </button>
-                </div>
-              </div>
-
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Ad</label>
-
-                  <input
-                    type="text"
-                    name="name"
-                    placeholder="Adın"
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Yaş</label>
-
-                  <input
-                    type="number"
-                    name="age"
-                    placeholder="Yaşın"
-                    min="18"
-                    max="99"
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Cinsiyet</label>
-
-                  <select
-                    name="gender"
-                    required
-                    defaultValue=""
-                  >
-                    <option value="" disabled>
-                      Seç
-                    </option>
-
-                    <option value="kadın">
-                      Kadın
-                    </option>
-
-                    <option value="erkek">
-                      Erkek
-                    </option>
-
-                    <option value="belirtmek-istemiyorum">
-                      Belirtmek istemiyorum
-                    </option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Şehir</label>
-
-                  <div className="input-with-icon">
-                    <MapPin size={17} />
-
-                    <select
-                      name="city"
-                      required
-                      defaultValue=""
-                    >
-                      <option value="" disabled>
-                        Şehir seç
-                      </option>
-
-                      {cities.map((city) => (
-                        <option
-                          key={city}
-                          value={city}
-                        >
-                          {city}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                <p>
+                  İlanının nasıl görüneceğini belirle.
+                </p>
               </div>
             </div>
 
-            <div className="form-card">
-              <div className="form-card-header">
-                <div>
-                  <h2>İlanın</h2>
+            <div className="form-group">
+              <label htmlFor="title">
+                İlan başlığı
+              </label>
 
-                  <p>
-                    Kendini ve nasıl bir arkadaş aradığını
-                    anlat.
-                  </p>
-                </div>
+              <input
+                id="title"
+                type="text"
+                placeholder="Örn: Kafa dengi yeni arkadaşlar arıyorum"
+                value={form.title}
+                onChange={(event) =>
+                  updateField(
+                    "title",
+                    event.target.value
+                  )
+                }
+                maxLength={100}
+                required
+              />
+            </div>
 
-                <Heart size={22} />
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="city">
+                  <MapPin size={15} />
+                  Şehir
+                </label>
+
+                <select
+                  id="city"
+                  value={form.city}
+                  onChange={(event) =>
+                    updateField(
+                      "city",
+                      event.target.value
+                    )
+                  }
+                  required
+                >
+                  <option value="">
+                    Şehir seç
+                  </option>
+
+                  {cities.map((city) => (
+                    <option key={city} value={city}>
+                      {city}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="form-group">
-                <label>İlan başlığı</label>
+                <label htmlFor="age">
+                  <Calendar size={15} />
+                  Yaş
+                </label>
 
                 <input
-                  type="text"
-                  name="title"
-                  placeholder="Örn: Yeni arkadaşlar arıyorum"
-                  maxLength="80"
+                  id="age"
+                  type="number"
+                  min="18"
+                  max="99"
+                  placeholder="23"
+                  value={form.age}
+                  onChange={(event) =>
+                    updateField(
+                      "age",
+                      event.target.value
+                    )
+                  }
                   required
                 />
               </div>
+            </div>
 
-              <div className="form-group">
-                <label>Bio / Hakkında</label>
+            <div className="form-group">
+              <label>
+                <User size={15} />
+                Cinsiyet
+              </label>
 
-                <textarea
-                  name="bio"
-                  placeholder="Kendinden, hobilerinden ve nasıl bir arkadaşlık aradığından bahset..."
-                  rows="7"
-                  maxLength="600"
-                  required
-                />
+              <div className="option-grid">
+                {["Erkek", "Kadın"].map(
+                  (gender) => (
+                    <button
+                      key={gender}
+                      type="button"
+                      className={
+                        form.gender === gender
+                          ? "option-button active"
+                          : "option-button"
+                      }
+                      onClick={() =>
+                        updateField(
+                          "gender",
+                          gender
+                        )
+                      }
+                    >
+                      {gender}
+                    </button>
+                  )
+                )}
               </div>
+            </div>
 
-              <div className="form-group">
-                <div className="label-row">
-                  <label>İlgi alanların</label>
+            <div className="form-group">
+              <label>
+                <Users size={15} />
+                Aradığın arkadaşın cinsiyeti
+              </label>
 
-                  <span>
-                    {selectedInterests.length}/5
-                  </span>
-                </div>
+              <div className="option-grid">
+                {[
+                  "Fark etmez",
+                  "Erkek",
+                  "Kadın"
+                ].map((gender) => (
+                  <button
+                    key={gender}
+                    type="button"
+                    className={
+                      form.friend_gender ===
+                      gender
+                        ? "option-button active"
+                        : "option-button"
+                    }
+                    onClick={() =>
+                      updateField(
+                        "friend_gender",
+                        gender
+                      )
+                    }
+                  >
+                    {gender}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                <div className="interest-selection">
-                  {interests.map((interest) => {
-                    const selected =
+            <div className="form-group">
+              <label>Aradığın yaş aralığı</label>
+
+              <div className="option-grid">
+                {[
+                  "18-25",
+                  "25-35",
+                  "35-45",
+                  "45+"
+                ].map((range) => (
+                  <button
+                    key={range}
+                    type="button"
+                    className={
+                      form.age_range === range
+                        ? "option-button active"
+                        : "option-button"
+                    }
+                    onClick={() =>
+                      updateField(
+                        "age_range",
+                        range
+                      )
+                    }
+                  >
+                    {range}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>İlgi alanların</label>
+
+              <p className="form-hint">
+                En fazla 6 tane seçebilirsin.
+              </p>
+
+              <div className="interest-grid">
+                {interests.map((interest) => (
+                  <button
+                    key={interest}
+                    type="button"
+                    className={
                       selectedInterests.includes(
                         interest
-                      );
-
-                    return (
-                      <button
-                        key={interest}
-                        type="button"
-                        className={
-                          selected
-                            ? "interest selected"
-                            : "interest"
-                        }
-                        onClick={() =>
-                          toggleInterest(interest)
-                        }
-                      >
-                        {selected && (
-                          <Check size={13} />
-                        )}
-
-                        {interest}
-                      </button>
-                    );
-                  })}
-                </div>
+                      )
+                        ? "interest-button active"
+                        : "interest-button"
+                    }
+                    onClick={() =>
+                      toggleInterest(interest)
+                    }
+                  >
+                    {interest}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="form-card">
-              <div className="form-card-header">
-                <div>
-                  <h2>Arkadaş tercihin</h2>
+            <div className="form-group">
+              <label htmlFor="bio">
+                Kendinden bahset
+              </label>
 
-                  <p>
-                    Nasıl insanlarla tanışmak istediğini
-                    belirt.
-                  </p>
-                </div>
-              </div>
+              <textarea
+                id="bio"
+                rows="7"
+                placeholder="Nasıl bir arkadaşlık aradığını, neler yapmaktan hoşlandığını anlat..."
+                value={form.bio}
+                onChange={(event) =>
+                  updateField(
+                    "bio",
+                    event.target.value
+                  )
+                }
+                maxLength={1000}
+                required
+              />
 
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Aradığın arkadaş</label>
-
-                  <select
-                    name="friendGender"
-                    defaultValue=""
-                    required
-                  >
-                    <option value="" disabled>
-                      Seç
-                    </option>
-
-                    <option value="kadın">
-                      Kadın
-                    </option>
-
-                    <option value="erkek">
-                      Erkek
-                    </option>
-
-                    <option value="farketmez">
-                      Fark etmez
-                    </option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Yaş aralığı</label>
-
-                  <select
-                    name="ageRange"
-                    defaultValue=""
-                    required
-                  >
-                    <option value="" disabled>
-                      Seç
-                    </option>
-
-                    <option value="18-25">
-                      18 - 25
-                    </option>
-
-                    <option value="25-35">
-                      25 - 35
-                    </option>
-
-                    <option value="35-45">
-                      35 - 45
-                    </option>
-
-                    <option value="45+">
-                      45+
-                    </option>
-
-                    <option value="farketmez">
-                      Fark etmez
-                    </option>
-                  </select>
-                </div>
-              </div>
+              <p className="form-hint">
+                En fazla 1000 karakter.
+              </p>
             </div>
 
-            <div className="form-footer">
-              <div className="form-notice">
-                <strong>Güvenli paylaşım</strong>
-
-                <span>
-                  Telefon, adres veya özel bilgilerini
-                  ilanında paylaşma.
-                </span>
+            {error && (
+              <div className="auth-message error">
+                {error}
               </div>
+            )}
 
+            <div className="create-submit-area">
               <button
                 type="submit"
                 className="publish-button"
+                disabled={saving}
               >
-                İlanı Yayınla →
+                <Sparkles size={18} />
+
+                {saving
+                  ? "İlan yayınlanıyor..."
+                  : "İlanı Yayınla"}
               </button>
             </div>
-          </form>
-        )}
+          </div>
+        </form>
       </section>
     </main>
   );
