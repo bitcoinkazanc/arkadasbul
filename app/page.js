@@ -3,651 +3,452 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
-  Search,
-  MapPin,
-  User,
-  Heart,
-  ShieldCheck,
-  ArrowRight,
-  LogOut
+Search,
+MapPin,
+Heart,
+Plus,
+SlidersHorizontal,
+Sparkles,
+User,
+LogOut
 } from "lucide-react";
 
 import AdSlot from "./components/AdSlot";
 import { createClient } from "./lib/supabase/client";
 
+const listings = [
+{
+id: 1,
+name: "Mert",
+age: 24,
+city: "Mardin",
+avatar: "M",
+online: true,
+tags: ["Oyun", "Müzik", "Kahve"],
+text: "Akşamları beraber oyun oynayabileceğim ve sohbet edebileceğim yeni arkadaşlar arıyorum."
+},
+{
+id: 2,
+name: "Elif",
+age: 22,
+city: "Diyarbakır",
+avatar: "E",
+online: true,
+tags: ["Sinema", "Kitap", "Gezi"],
+text: "Hafta sonları yeni yerler keşfetmek ve güzel sohbetler etmek isteyen arkadaşlar arıyorum."
+},
+{
+id: 3,
+name: "Can",
+age: 27,
+city: "Gaziantep",
+avatar: "C",
+online: false,
+tags: ["Spor", "Futbol", "Kahve"],
+text: "Spor yapmayı ve maç izlemeyi seven kafa dengi insanlarla tanışmak istiyorum."
+},
+{
+id: 4,
+name: "Zeynep",
+age: 25,
+city: "Şanlıurfa",
+avatar: "Z",
+online: true,
+tags: ["Müzik", "Fotoğraf", "Gezi"],
+text: "Yeni insanlarla tanışıp birlikte fotoğraf çekebileceğim arkadaşlar arıyorum."
+},
+{
+id: 5,
+name: "Emre",
+age: 29,
+city: "Mardin",
+avatar: "E",
+online: false,
+tags: ["Teknoloji", "Oyun", "Film"],
+text: "Teknoloji ve oyun konuşmayı seven arkadaşlarla tanışmak istiyorum."
+},
+{
+id: 6,
+name: "Derya",
+age: 23,
+city: "Batman",
+avatar: "D",
+online: true,
+tags: ["Dans", "Müzik", "Kahve"],
+text: "Enerjisi yüksek, birlikte etkinliklere katılabileceğim yeni arkadaşlar arıyorum."
+},
+{
+id: 7,
+name: "Burak",
+age: 26,
+city: "Mardin",
+avatar: "B",
+online: true,
+tags: ["Oyun", "Teknoloji", "Film"],
+text: "Oyun oynamayı ve teknoloji hakkında konuşmayı seven insanlarla tanışmak istiyorum."
+},
+{
+id: 8,
+name: "Sena",
+age: 21,
+city: "Diyarbakır",
+avatar: "S",
+online: false,
+tags: ["Kahve", "Gezi", "Müzik"],
+text: "Kahve içip sohbet edebileceğim ve yeni yerler keşfedebileceğim arkadaşlar arıyorum."
+}
+];
+
 function ListingCard({ item }) {
-  const profile = item.profile || {};
+return (
+<article className="listing-card">
+<div className="listing-header">
+<div className="avatar-container">
+<div className="avatar">{item.avatar}</div>
 
-  const name = profile.name || "İsimsiz";
-  const avatar = profile.avatar_url || item.avatar_url || "";
+{item.online && <span className="online-indicator" />}  
+    </div>  
 
-  return (
-    <article className="listing-card">
+    <div className="user-info">  
+      <h3>  
+        {item.name}, {item.age}  
+      </h3>  
 
-      <div className="listing-card-header">
+      <div className="location">  
+        <MapPin size={14} />  
+        {item.city}  
+      </div>  
+    </div>  
 
-        <div className="listing-avatar">
-          {avatar ? (
-            <img
-              src={avatar}
-              alt={name}
-            />
-          ) : (
-            <User size={28} />
-          )}
-        </div>
+    <button  
+      className="favorite-button"  
+      aria-label="Favorilere ekle"  
+    >  
+      <Heart size={19} />  
+    </button>  
+  </div>  
 
-        <div className="listing-user-info">
+  <p className="listing-text">  
+    {item.text}  
+  </p>  
 
-          <h3>
-            {name}
-          </h3>
+  <div className="tags">  
+    {item.tags.map((tag) => (  
+      <span key={tag}>{tag}</span>  
+    ))}  
+  </div>  
 
-          <div className="listing-meta">
+  <div className="listing-footer">  
+    <span  
+      className={  
+        item.online  
+          ? "online-text"  
+          : "offline-text"  
+      }  
+    >  
+      {item.online  
+        ? "● Çevrimiçi"  
+        : "Çevrimdışı"}  
+    </span>  
 
-            {item.age && (
-              <span>
-                {item.age} yaş
-              </span>
-            )}
+    <Link  
+      href={`/ilan/${item.id}`}  
+      className="profile-button"  
+    >  
+      Profili Gör →  
+    </Link>  
+  </div>  
+</article>
 
-            {item.city && (
-              <span>
-                <MapPin size={13} />
-                {item.city}
-              </span>
-            )}
-
-          </div>
-
-        </div>
-
-      </div>
-
-      <div className="listing-card-body">
-
-        <h4>
-          {item.title || "Arkadaşlık İlanı"}
-        </h4>
-
-        <p>
-          {item.bio ||
-            "Arkadaşlık için yeni insanlarla tanışmak istiyorum."}
-        </p>
-
-        {Array.isArray(item.interests) &&
-          item.interests.length > 0 && (
-            <div className="tags">
-
-              {item.interests
-                .slice(0, 5)
-                .map((interest) => (
-                  <span key={interest}>
-                    {interest}
-                  </span>
-                ))}
-
-            </div>
-          )}
-
-      </div>
-
-      <div className="listing-card-footer">
-
-        <span className="listing-gender">
-          {item.gender || ""}
-        </span>
-
-        <Link
-          href={`/ilan/${item.id}`}
-          className="profile-button"
-        >
-          İlanı Gör
-          <ArrowRight size={15} />
-        </Link>
-
-      </div>
-
-    </article>
-  );
+);
 }
 
-export default function HomePage() {
-  const [listings, setListings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    async function loadPage() {
-      const supabase = createClient();
-
-      try {
-        const {
-          data: {
-            user: currentUser
-          }
-        } = await supabase.auth.getUser();
-
-        setUser(currentUser || null);
-
-        const {
-          data: listingsData,
-          error: listingsError
-        } = await supabase
-          .from("listings")
-          .select("*")
-          .order("created_at", {
-            ascending: false
-          });
-
-        if (listingsError) {
-          throw listingsError;
-        }
-
-        const listingRows = listingsData || [];
-
-        const userIds = [
-          ...new Set(
-            listingRows
-              .map((item) => item.user_id)
-              .filter(Boolean)
-          )
-        ];
-
-        let profiles = [];
-
-        if (userIds.length > 0) {
-          const {
-            data: profileData,
-            error: profileError
-          } = await supabase
-            .from("profiles")
-            .select(
-              "id, name, avatar_url, age, gender, city"
-            )
-            .in("id", userIds);
-
-          if (profileError) {
-            console.error(
-              "Profil bilgileri alınamadı:",
-              profileError
-            );
-          } else {
-            profiles = profileData || [];
-          }
-        }
-
-        const profileMap = {};
-
-        profiles.forEach((profile) => {
-          profileMap[profile.id] = profile;
-        });
-
-        const combinedListings = listingRows.map(
-          (listing) => ({
-            ...listing,
-            profile:
-              profileMap[listing.user_id] || null
-          })
-        );
-
-        setListings(combinedListings);
-
-      } catch (err) {
-        console.error(
-          "Ana sayfa yükleme hatası:",
-          err
-        );
-
-        setError(
-          "İlanlar yüklenirken bir hata oluştu."
-        );
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadPage();
-  }, []);
-
-  async function handleLogout() {
-    const supabase = createClient();
-
-    await supabase.auth.signOut();
-
-    window.location.href = "/";
-  }
-
-  return (
-    <main>
-
-      <header className="header">
-
-        <div className="container navigation">
-
-          <Link
-            href="/"
-            className="logo"
-          >
-            <span className="logo-icon">
-              ♡
-            </span>
-
-            Arkadaş
-            <span>Bul</span>
-          </Link>
-
-          <nav className="nav-links">
-
-            <Link href="/">
-              İlanlar
-            </Link>
-
-            {user ? (
-              <>
-                <Link href="/profil">
-                  Profilim
-                </Link>
-
-                <Link href="/ilan-ver">
-                  İlan Ver
-                </Link>
-
-                <button
-                  type="button"
-                  className="nav-logout"
-                  onClick={handleLogout}
-                >
-                  <LogOut size={15} />
-                  Çıkış
-                </button>
-              </>
-            ) : (
-              <>
-                <Link href="/giris">
-                  Giriş Yap
-                </Link>
-
-                <Link
-                  href="/kayit"
-                  className="nav-button"
-                >
-                  Kayıt Ol
-                </Link>
-              </>
-            )}
-
-          </nav>
-
-        </div>
-
-      </header>
-
-      <section className="hero">
-
-        <div className="container hero-content">
-
-          <div className="section-label">
-            ARKADAŞLIK PLATFORMU
-          </div>
-
-          <h1>
-            Yeni insanlarla
-            <br />
-            <span>tanış.</span>
-          </h1>
-
-          <p>
-            Ortak ilgi alanlarına sahip
-            insanları bul, sohbet et ve
-            yeni arkadaşlıklar kur.
-          </p>
-
-          <div className="hero-actions">
-
-            <Link
-              href="#ilanlar"
-              className="publish-button"
-            >
-              İlanları Keşfet
-              <ArrowRight size={17} />
-            </Link>
-
-            <Link
-              href="/ilan-ver"
-              className="secondary-button"
-            >
-              İlan Ver
-            </Link>
-
-          </div>
-
-        </div>
-
-      </section>
-
-      <section
-        className="search-section"
-        id="ilanlar"
-      >
-
-        <div className="container">
-
-          <div className="search-box">
-
-            <div className="search-input-wrapper">
-
-              <Search size={19} />
-
-              <input
-                type="text"
-                placeholder="Şehir, ilgi alanı veya yaş ara..."
-              />
-
-            </div>
-
-            <button
-              type="button"
-              className="search-button"
-            >
-              Ara
-            </button>
-
-          </div>
-
-        </div>
-
-      </section>
-
-      <section className="listings-section">
-
-        <div className="container">
-
-          <div className="section-header">
-
-            <div>
-
-              <div className="section-label">
-                SON İLANLAR
-              </div>
-
-              <h2>
-                Arkadaşını bul
-              </h2>
-
-            </div>
-
-            <span className="listing-count">
-              {listings.length} ilan
-            </span>
-
-          </div>
-
-          {loading && (
-            <div className="empty-state">
-              <p>
-                İlanlar yükleniyor...
-              </p>
-            </div>
-          )}
-
-          {!loading && error && (
-            <div className="empty-state">
-              <p>
-                {error}
-              </p>
-            </div>
-          )}
-
-          {!loading &&
-            !error &&
-            listings.length === 0 && (
-              <div className="empty-state">
-
-                <User size={30} />
-
-                <h3>
-                  Henüz ilan yok
-                </h3>
-
-                <p>
-                  İlk ilanı sen ver.
-                </p>
-
-                <Link
-                  href="/ilan-ver"
-                  className="publish-button"
-                >
-                  İlan Ver
-                </Link>
-
-              </div>
-            )}
-
-          {!loading &&
-            !error &&
-            listings.length > 0 && (
-
-              <div className="listings-grid">
-
-                {listings.map(
-                  (item, index) => (
-                    <div
-                      key={item.id}
-                    >
-
-                      <ListingCard
-                        item={item}
-                      />
-
-                      {(index + 1) % 4 === 0 && (
-                        <div
-                          style={{
-                            marginTop: "20px",
-                            marginBottom: "20px"
-                          }}
-                        >
-                          <AdSlot />
-                        </div>
-                      )}
-
-                    </div>
-                  )
-                )}
-
-              </div>
-
-            )}
-
-        </div>
-
-      </section>
-
-      <section className="popular-section">
-
-        <div className="container">
-
-          <div className="section-label">
-            POPÜLER İLGİ ALANLARI
-          </div>
-
-          <div className="popular-tags">
-
-            {[
-              "Oyun",
-              "Müzik",
-              "Kahve",
-              "Sinema",
-              "Kitap",
-              "Gezi",
-              "Spor",
-              "Teknoloji"
-            ].map(
-              (item) => (
-                <span key={item}>
-                  {item}
-                </span>
-              )
-            )}
-
-          </div>
-
-        </div>
-
-      </section>
-
-      <section className="how-section">
-
-        <div className="container">
-
-          <div className="section-header">
-
-            <div>
-
-              <div className="section-label">
-                NASIL ÇALIŞIR?
-              </div>
-
-              <h2>
-                Arkadaş bulmak çok kolay
-              </h2>
-
-            </div>
-
-          </div>
-
-          <div className="steps-grid">
-
-            <div className="step-card">
-
-              <div className="step-icon">
-                <User size={23} />
-              </div>
-
-              <span>
-                01
-              </span>
-
-              <h3>
-                Profilini oluştur
-              </h3>
-
-              <p>
-                Kendinden bahset ve
-                ilgi alanlarını seç.
-              </p>
-
-            </div>
-
-            <div className="step-card">
-
-              <div className="step-icon">
-                <Search size={23} />
-              </div>
-
-              <span>
-                02
-              </span>
-
-              <h3>
-                İlanları keşfet
-              </h3>
-
-              <p>
-                Sana uygun insanları
-                şehir ve ilgi alanına
-                göre bul.
-              </p>
-
-            </div>
-
-            <div className="step-card">
-
-              <div className="step-icon">
-                <Heart size={23} />
-              </div>
-
-              <span>
-                03
-              </span>
-
-              <h3>
-                Bağlantı kur
-              </h3>
-
-              <p>
-                İlgini çeken kişiye
-                ulaş ve tanış.
-              </p>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </section>
-
-      <footer className="footer">
-
-        <div className="container footer-content">
-
-          <div>
-
-            <Link
-              href="/"
-              className="logo"
-            >
-              <span className="logo-icon">
-                ♡
-              </span>
-
-              Arkadaş
-              <span>Bul</span>
-            </Link>
-
-            <p>
-              Yeni arkadaşlıkların
-              başlangıç noktası.
-            </p>
-
-          </div>
-
-          <div className="footer-links">
-
-            <Link href="/">
-              Ana Sayfa
-            </Link>
-
-            <Link href="/profil">
-              Profilim
-            </Link>
-
-            <Link href="/ilan-ver">
-              İlan Ver
-            </Link>
-
-          </div>
-
-        </div>
-
-        <div className="container footer-bottom">
-
-          <span>
-            © 2026 ArkadaşBul
-          </span>
-
-          <span>
-            <ShieldCheck size={14} />
-            Güvenli arkadaşlık
-          </span>
-
-        </div>
-
-      </footer>
-
-    </main>
-  );
+export default function Home() {
+const supabase = createClient();
+
+const [user, setUser] = useState(null);
+const [checkingAuth, setCheckingAuth] = useState(true);
+
+useEffect(() => {
+let mounted = true;
+
+async function loadUser() {  
+  const {  
+    data: { user }  
+  } = await supabase.auth.getUser();  
+
+  if (mounted) {  
+    setUser(user);  
+    setCheckingAuth(false);  
+  }  
+}  
+
+loadUser();  
+
+const {  
+  data: { subscription }  
+} = supabase.auth.onAuthStateChange(  
+  (_event, session) => {  
+    setUser(session?.user ?? null);  
+    setCheckingAuth(false);  
+  }  
+);  
+
+return () => {  
+  mounted = false;  
+  subscription.unsubscribe();  
+};
+
+}, [supabase]);
+
+async function handleLogout() {
+await supabase.auth.signOut();
+
+window.location.href = "/";
+
+}
+
+return (
+<main>
+<header className="header">
+<div className="container navigation">
+<Link className="logo" href="/">
+<span className="logo-icon">♡</span>
+Arkadaş<span>Bul</span>
+</Link>
+
+<nav>  
+        <a href="#ilanlar">İlanlar</a>  
+        <a href="#nasil">Nasıl Çalışır?</a>  
+      </nav>  
+
+      <div className="header-actions">  
+        <Link  
+          href="/ilan-ver"  
+          className="create-button"  
+        >  
+          <Plus size={18} />  
+          İlan Ver  
+        </Link>  
+
+        {checkingAuth ? null : user ? (  
+          <>  
+            <Link  
+              href="/profil"  
+              className="account-button"  
+            >  
+              <User size={17} />  
+              Profilim  
+            </Link>  
+
+            <button  
+              type="button"  
+              className="logout-button"  
+              onClick={handleLogout}  
+            >  
+              <LogOut size={17} />  
+              Çıkış  
+            </button>  
+          </>  
+        ) : (  
+          <>  
+            <Link  
+              href="/giris"  
+              className="login-button"  
+            >  
+              Giriş Yap  
+            </Link>  
+
+            <Link  
+              href="/kayit"  
+              className="register-button"  
+            >  
+              Kayıt Ol  
+            </Link>  
+          </>  
+        )}  
+      </div>  
+    </div>  
+  </header>  
+
+  <section className="hero">  
+    <div className="hero-background one" />  
+    <div className="hero-background two" />  
+
+    <div className="container hero-content">  
+      <div className="hero-label">  
+        <Sparkles size={15} />  
+        Yeni insanlarla tanış  
+      </div>  
+
+      <h1>  
+        Aradığın arkadaşlık  
+        <br />  
+        <span>burada başlayabilir.</span>  
+      </h1>  
+
+      <p>  
+        Ortak ilgi alanlarına sahip insanları keşfet,  
+        arkadaşlık ilanlarını incele ve yeni bağlantılar kur.  
+      </p>  
+
+      <div className="search-panel">  
+        <div className="search-input">  
+          <Search size={20} />  
+
+          <input  
+            type="text"  
+            placeholder="Ne tür bir arkadaş arıyorsun?"  
+          />  
+        </div>  
+
+        <div className="city-input">  
+          <MapPin size={19} />  
+
+          <select defaultValue="">  
+            <option value="" disabled>  
+              Şehir seç  
+            </option>  
+
+            <option>Mardin</option>  
+            <option>Diyarbakır</option>  
+            <option>Gaziantep</option>  
+            <option>Şanlıurfa</option>  
+            <option>Batman</option>  
+          </select>  
+        </div>  
+
+        <button className="search-button">  
+          İlanları Bul  
+        </button>  
+      </div>  
+
+      <div className="popular-tags">  
+        <span>Popüler:</span>  
+
+        {[  
+          "Oyun",  
+          "Kahve",  
+          "Gezi",  
+          "Spor",  
+          "Sinema"  
+        ].map((tag) => (  
+          <button key={tag}>  
+            {tag}  
+          </button>  
+        ))}  
+      </div>  
+    </div>  
+  </section>  
+
+  <section  
+    className="container listings-section"  
+    id="ilanlar"  
+  >  
+    <div className="section-header">  
+      <div>  
+        <div className="section-label">  
+          KEŞFET  
+        </div>  
+
+        <h2>  
+          Yeni arkadaşlık ilanları  
+        </h2>  
+
+        <p>  
+          Sana uygun insanları keşfet ve yeni  
+          bağlantılar kur.  
+        </p>  
+      </div>  
+
+      <button className="filter-button">  
+        <SlidersHorizontal size={17} />  
+        Filtrele  
+      </button>  
+    </div>  
+
+    <div className="listing-grid">  
+      {listings.map((item, index) => (  
+        <div key={item.id}>  
+          <ListingCard item={item} />  
+
+          {(index + 1) % 4 === 0 && (  
+            <AdSlot size="medium" />  
+          )}  
+        </div>  
+      ))}  
+    </div>  
+  </section>  
+
+  <section  
+    className="how-section"  
+    id="nasil"  
+  >  
+    <div className="container">  
+      <div className="section-label">  
+        ÇOK KOLAY  
+      </div>  
+
+      <h2>  
+        Yeni bir arkadaşlık  
+        <br />  
+        3 adım uzağında.  
+      </h2>  
+
+      <div className="steps">  
+        <div className="step">  
+          <span>01</span>  
+
+          <h3>Keşfet</h3>  
+
+          <p>  
+            Şehrini ve ilgi alanlarını seçerek  
+            sana uygun ilanları bul.  
+          </p>  
+        </div>  
+
+        <div className="step">  
+          <span>02</span>  
+
+          <h3>Tanış</h3>  
+
+          <p>  
+            Profilleri incele, ortak noktalarınızı  
+            keşfet ve iletişim kur.  
+          </p>  
+        </div>  
+
+        <div className="step">  
+          <span>03</span>  
+
+          <h3>Bağlan</h3>  
+
+          <p>  
+            Yeni arkadaşlığını güzel anılara  
+            dönüştür.  
+          </p>  
+        </div>  
+      </div>  
+    </div>  
+  </section>  
+
+  <footer>  
+    <div className="container footer">  
+      <div className="logo">  
+        <span className="logo-icon">♡</span>  
+        Arkadaş<span>Bul</span>  
+      </div>  
+
+      <p>  
+        Yeni arkadaşlıklar, gerçek bağlantılar.  
+      </p>  
+
+      <small>  
+        © 2026 ArkadaşBul  
+      </small>  
+    </div>  
+  </footer>  
+</main>
+
+);
 }
