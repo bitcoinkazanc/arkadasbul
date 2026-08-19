@@ -10,7 +10,8 @@ import {
   Save,
   LogOut,
   Camera,
-  Pencil
+  Pencil,
+  Eye
 } from "lucide-react";
 import { createClient } from "../lib/supabase/client";
 
@@ -109,6 +110,9 @@ export default function ProfilePage() {
     avatar_url: ""
   });
 
+  const [myListings, setMyListings] = useState([]);
+  const [listingsLoading, setListingsLoading] = useState(true);
+
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -168,6 +172,36 @@ export default function ProfilePage() {
             data?.avatar_url || ""
         });
 
+        const {
+          data: listingsData,
+          error: listingsError
+        } = await supabase
+          .from("listings")
+          .select(
+            "id, title, bio, city, age, gender, friend_gender, age_range, interests, avatar_url, created_at"
+          )
+          .eq(
+            "user_id",
+            currentUser.id
+          )
+          .order(
+            "created_at",
+            {
+              ascending: false
+            }
+          );
+
+        if (listingsError) {
+          console.error(
+            "İlanlar yüklenemedi:",
+            listingsError
+          );
+        } else {
+          setMyListings(
+            listingsData || []
+          );
+        }
+
       } catch (err) {
         console.error(
           "Profil yükleme hatası:",
@@ -180,6 +214,7 @@ export default function ProfilePage() {
         );
       } finally {
         setLoading(false);
+        setListingsLoading(false);
       }
     }
 
@@ -403,12 +438,9 @@ export default function ProfilePage() {
 
                   <p
                     style={{
-                      margin:
-                        "5px 0 0",
-                      color:
-                        "#8a837c",
-                      fontSize:
-                        "12px"
+                      margin: "5px 0 0",
+                      color: "#8a837c",
+                      fontSize: "12px"
                     }}
                   >
                     Fotoğraf yükleme
@@ -431,6 +463,7 @@ export default function ProfilePage() {
 
                 <div className="profile-info-item">
                   <span>Yaş</span>
+
                   <strong>
                     {form.age}
                   </strong>
@@ -438,6 +471,7 @@ export default function ProfilePage() {
 
                 <div className="profile-info-item">
                   <span>Cinsiyet</span>
+
                   <strong>
                     {form.gender}
                   </strong>
@@ -480,6 +514,130 @@ export default function ProfilePage() {
                 <Pencil size={18} />
                 Profili Düzenle
               </button>
+
+              <div className="my-listings-section">
+
+                <div className="my-listings-heading">
+                  <div>
+                    <div className="section-label">
+                      İLANLARIM
+                    </div>
+
+                    <h2>
+                      Verdiğim ilanlar
+                    </h2>
+                  </div>
+
+                  <Link
+                    href="/ilan-ver"
+                    className="my-listing-add-button"
+                  >
+                    + İlan Ver
+                  </Link>
+                </div>
+
+                {listingsLoading ? (
+                  <div className="my-listings-empty">
+                    <p>
+                      İlanların yükleniyor...
+                    </p>
+                  </div>
+                ) : myListings.length === 0 ? (
+                  <div className="my-listings-empty">
+                    <p>
+                      Henüz bir ilan vermedin.
+                    </p>
+
+                    <Link
+                      href="/ilan-ver"
+                      className="profile-button"
+                    >
+                      İlk İlanını Ver →
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="my-listings-list">
+
+                    {myListings.map(
+                      (listing) => {
+
+                        const interests =
+                          Array.isArray(
+                            listing.interests
+                          )
+                            ? listing.interests
+                            : [];
+
+                        return (
+                          <article
+                            key={listing.id}
+                            className="my-listing-card"
+                          >
+
+                            <div className="my-listing-card-top">
+
+                              <div>
+                                <h3>
+                                  {listing.title}
+                                </h3>
+
+                                <div className="my-listing-location">
+                                  <MapPin size={14} />
+                                  {listing.city}
+                                </div>
+                              </div>
+
+                              <span className="my-listing-age">
+                                {listing.age}
+                              </span>
+
+                            </div>
+
+                            <p>
+                              {listing.bio}
+                            </p>
+
+                            {interests.length > 0 && (
+                              <div className="tags">
+                                {interests
+                                  .slice(0, 6)
+                                  .map(
+                                    (interest) => (
+                                      <span
+                                        key={interest}
+                                      >
+                                        {interest}
+                                      </span>
+                                    )
+                                  )}
+                              </div>
+                            )}
+
+                            <div className="my-listing-footer">
+
+                              <span>
+                                {listing.gender}
+                              </span>
+
+                              <Link
+                                href={`/ilan/${listing.id}`}
+                                className="profile-button"
+                              >
+                                <Eye size={15} />
+                                İlanı Gör
+                              </Link>
+
+                            </div>
+
+                          </article>
+                        );
+                      }
+                    )}
+
+                  </div>
+                )}
+
+              </div>
 
             </>
           ) : (
