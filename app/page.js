@@ -3,452 +3,555 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
-Search,
-MapPin,
-Heart,
-Plus,
-SlidersHorizontal,
-Sparkles,
-User,
-LogOut
+  Search,
+  MapPin,
+  Heart,
+  Plus,
+  SlidersHorizontal,
+  Sparkles,
+  User,
+  LogOut
 } from "lucide-react";
 
 import AdSlot from "./components/AdSlot";
 import { createClient } from "./lib/supabase/client";
 
-const listings = [
-{
-id: 1,
-name: "Mert",
-age: 24,
-city: "Mardin",
-avatar: "M",
-online: true,
-tags: ["Oyun", "Müzik", "Kahve"],
-text: "Akşamları beraber oyun oynayabileceğim ve sohbet edebileceğim yeni arkadaşlar arıyorum."
-},
-{
-id: 2,
-name: "Elif",
-age: 22,
-city: "Diyarbakır",
-avatar: "E",
-online: true,
-tags: ["Sinema", "Kitap", "Gezi"],
-text: "Hafta sonları yeni yerler keşfetmek ve güzel sohbetler etmek isteyen arkadaşlar arıyorum."
-},
-{
-id: 3,
-name: "Can",
-age: 27,
-city: "Gaziantep",
-avatar: "C",
-online: false,
-tags: ["Spor", "Futbol", "Kahve"],
-text: "Spor yapmayı ve maç izlemeyi seven kafa dengi insanlarla tanışmak istiyorum."
-},
-{
-id: 4,
-name: "Zeynep",
-age: 25,
-city: "Şanlıurfa",
-avatar: "Z",
-online: true,
-tags: ["Müzik", "Fotoğraf", "Gezi"],
-text: "Yeni insanlarla tanışıp birlikte fotoğraf çekebileceğim arkadaşlar arıyorum."
-},
-{
-id: 5,
-name: "Emre",
-age: 29,
-city: "Mardin",
-avatar: "E",
-online: false,
-tags: ["Teknoloji", "Oyun", "Film"],
-text: "Teknoloji ve oyun konuşmayı seven arkadaşlarla tanışmak istiyorum."
-},
-{
-id: 6,
-name: "Derya",
-age: 23,
-city: "Batman",
-avatar: "D",
-online: true,
-tags: ["Dans", "Müzik", "Kahve"],
-text: "Enerjisi yüksek, birlikte etkinliklere katılabileceğim yeni arkadaşlar arıyorum."
-},
-{
-id: 7,
-name: "Burak",
-age: 26,
-city: "Mardin",
-avatar: "B",
-online: true,
-tags: ["Oyun", "Teknoloji", "Film"],
-text: "Oyun oynamayı ve teknoloji hakkında konuşmayı seven insanlarla tanışmak istiyorum."
-},
-{
-id: 8,
-name: "Sena",
-age: 21,
-city: "Diyarbakır",
-avatar: "S",
-online: false,
-tags: ["Kahve", "Gezi", "Müzik"],
-text: "Kahve içip sohbet edebileceğim ve yeni yerler keşfedebileceğim arkadaşlar arıyorum."
-}
-];
-
 function ListingCard({ item }) {
-return (
-<article className="listing-card">
-<div className="listing-header">
-<div className="avatar-container">
-<div className="avatar">{item.avatar}</div>
+  const profile = item.profile || {};
 
-{item.online && <span className="online-indicator" />}  
-    </div>  
+  const name = profile.name || "İsimsiz";
+  const age = item.age || profile.age || "";
+  const city = item.city || profile.city || "";
+  const avatarUrl =
+    item.avatar_url || profile.avatar_url || "";
 
-    <div className="user-info">  
-      <h3>  
-        {item.name}, {item.age}  
-      </h3>  
+  const interests = Array.isArray(item.interests)
+    ? item.interests
+    : [];
 
-      <div className="location">  
-        <MapPin size={14} />  
-        {item.city}  
-      </div>  
-    </div>  
+  return (
+    <article className="listing-card">
+      <div className="listing-header">
 
-    <button  
-      className="favorite-button"  
-      aria-label="Favorilere ekle"  
-    >  
-      <Heart size={19} />  
-    </button>  
-  </div>  
+        <div className="avatar-container">
+          <div className="avatar">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={name}
+              />
+            ) : (
+              name.charAt(0).toUpperCase()
+            )}
+          </div>
 
-  <p className="listing-text">  
-    {item.text}  
-  </p>  
+          <span className="online-indicator" />
+        </div>
 
-  <div className="tags">  
-    {item.tags.map((tag) => (  
-      <span key={tag}>{tag}</span>  
-    ))}  
-  </div>  
+        <div className="user-info">
+          <h3>
+            {name}
+            {age ? `, ${age}` : ""}
+          </h3>
 
-  <div className="listing-footer">  
-    <span  
-      className={  
-        item.online  
-          ? "online-text"  
-          : "offline-text"  
-      }  
-    >  
-      {item.online  
-        ? "● Çevrimiçi"  
-        : "Çevrimdışı"}  
-    </span>  
+          <div className="location">
+            <MapPin size={14} />
+            {city}
+          </div>
+        </div>
 
-    <Link  
-      href={`/ilan/${item.id}`}  
-      className="profile-button"  
-    >  
-      Profili Gör →  
-    </Link>  
-  </div>  
-</article>
+        <button
+          className="favorite-button"
+          aria-label="Favorilere ekle"
+        >
+          <Heart size={19} />
+        </button>
 
-);
+      </div>
+
+      <p className="listing-text">
+        {item.bio ||
+          "Arkadaşlık için yeni insanlarla tanışmak istiyorum."}
+      </p>
+
+      <div className="tags">
+        {interests.slice(0, 5).map((tag) => (
+          <span key={tag}>
+            {tag}
+          </span>
+        ))}
+      </div>
+
+      <div className="listing-footer">
+
+        <span className="online-text">
+          ● Aktif ilan
+        </span>
+
+        <Link
+          href={`/ilan/${item.id}`}
+          className="profile-button"
+        >
+          İlanı Gör →
+        </Link>
+
+      </div>
+    </article>
+  );
 }
 
 export default function Home() {
-const supabase = createClient();
+  const supabase = createClient();
 
-const [user, setUser] = useState(null);
-const [checkingAuth, setCheckingAuth] = useState(true);
+  const [listings, setListings] = useState([]);
+  const [user, setUser] = useState(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [loadingListings, setLoadingListings] =
+    useState(true);
 
-useEffect(() => {
-let mounted = true;
+  useEffect(() => {
+    let mounted = true;
 
-async function loadUser() {  
-  const {  
-    data: { user }  
-  } = await supabase.auth.getUser();  
+    async function loadPage() {
+      const {
+        data: {
+          user: currentUser
+        }
+      } = await supabase.auth.getUser();
 
-  if (mounted) {  
-    setUser(user);  
-    setCheckingAuth(false);  
-  }  
-}  
+      if (mounted) {
+        setUser(currentUser);
+        setCheckingAuth(false);
+      }
 
-loadUser();  
+      const {
+        data: listingData,
+        error: listingError
+      } = await supabase
+        .from("listings")
+        .select("*")
+        .order("created_at", {
+          ascending: false
+        });
 
-const {  
-  data: { subscription }  
-} = supabase.auth.onAuthStateChange(  
-  (_event, session) => {  
-    setUser(session?.user ?? null);  
-    setCheckingAuth(false);  
-  }  
-);  
+      if (listingError) {
+        console.error(
+          "İlanlar alınamadı:",
+          listingError
+        );
 
-return () => {  
-  mounted = false;  
-  subscription.unsubscribe();  
-};
+        if (mounted) {
+          setListings([]);
+          setLoadingListings(false);
+        }
 
-}, [supabase]);
+        return;
+      }
 
-async function handleLogout() {
-await supabase.auth.signOut();
+      const rows = listingData || [];
 
-window.location.href = "/";
+      const userIds = [
+        ...new Set(
+          rows
+            .map((listing) => listing.user_id)
+            .filter(Boolean)
+        )
+      ];
 
-}
+      let profiles = [];
 
-return (
-<main>
-<header className="header">
-<div className="container navigation">
-<Link className="logo" href="/">
-<span className="logo-icon">♡</span>
-Arkadaş<span>Bul</span>
-</Link>
+      if (userIds.length > 0) {
+        const {
+          data: profileData,
+          error: profileError
+        } = await supabase
+          .from("profiles")
+          .select(
+            "id, name, age, gender, city, avatar_url"
+          )
+          .in("id", userIds);
 
-<nav>  
-        <a href="#ilanlar">İlanlar</a>  
-        <a href="#nasil">Nasıl Çalışır?</a>  
-      </nav>  
+        if (profileError) {
+          console.error(
+            "Profiller alınamadı:",
+            profileError
+          );
+        } else {
+          profiles = profileData || [];
+        }
+      }
 
-      <div className="header-actions">  
-        <Link  
-          href="/ilan-ver"  
-          className="create-button"  
-        >  
-          <Plus size={18} />  
-          İlan Ver  
-        </Link>  
+      const profileMap = {};
 
-        {checkingAuth ? null : user ? (  
-          <>  
-            <Link  
-              href="/profil"  
-              className="account-button"  
-            >  
-              <User size={17} />  
-              Profilim  
-            </Link>  
+      profiles.forEach((profile) => {
+        profileMap[profile.id] = profile;
+      });
 
-            <button  
-              type="button"  
-              className="logout-button"  
-              onClick={handleLogout}  
-            >  
-              <LogOut size={17} />  
-              Çıkış  
-            </button>  
-          </>  
-        ) : (  
-          <>  
-            <Link  
-              href="/giris"  
-              className="login-button"  
-            >  
-              Giriş Yap  
-            </Link>  
+      const combinedListings = rows.map(
+        (listing) => ({
+          ...listing,
+          profile:
+            profileMap[listing.user_id] || null
+        })
+      );
 
-            <Link  
-              href="/kayit"  
-              className="register-button"  
-            >  
-              Kayıt Ol  
-            </Link>  
-          </>  
-        )}  
-      </div>  
-    </div>  
-  </header>  
+      if (mounted) {
+        setListings(combinedListings);
+        setLoadingListings(false);
+      }
+    }
 
-  <section className="hero">  
-    <div className="hero-background one" />  
-    <div className="hero-background two" />  
+    loadPage();
 
-    <div className="container hero-content">  
-      <div className="hero-label">  
-        <Sparkles size={15} />  
-        Yeni insanlarla tanış  
-      </div>  
+    const {
+      data: {
+        subscription
+      }
+    } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (mounted) {
+          setUser(session?.user ?? null);
+          setCheckingAuth(false);
+        }
+      }
+    );
 
-      <h1>  
-        Aradığın arkadaşlık  
-        <br />  
-        <span>burada başlayabilir.</span>  
-      </h1>  
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
 
-      <p>  
-        Ortak ilgi alanlarına sahip insanları keşfet,  
-        arkadaşlık ilanlarını incele ve yeni bağlantılar kur.  
-      </p>  
+  async function handleLogout() {
+    await supabase.auth.signOut();
 
-      <div className="search-panel">  
-        <div className="search-input">  
-          <Search size={20} />  
+    window.location.href = "/";
+  }
 
-          <input  
-            type="text"  
-            placeholder="Ne tür bir arkadaş arıyorsun?"  
-          />  
-        </div>  
+  return (
+    <main>
+      <header className="header">
+        <div className="container navigation">
 
-        <div className="city-input">  
-          <MapPin size={19} />  
+          <Link
+            className="logo"
+            href="/"
+          >
+            <span className="logo-icon">
+              ♡
+            </span>
 
-          <select defaultValue="">  
-            <option value="" disabled>  
-              Şehir seç  
-            </option>  
+            Arkadaş<span>Bul</span>
+          </Link>
 
-            <option>Mardin</option>  
-            <option>Diyarbakır</option>  
-            <option>Gaziantep</option>  
-            <option>Şanlıurfa</option>  
-            <option>Batman</option>  
-          </select>  
-        </div>  
+          <nav>
+            <a href="#ilanlar">
+              İlanlar
+            </a>
 
-        <button className="search-button">  
-          İlanları Bul  
-        </button>  
-      </div>  
+            <a href="#nasil">
+              Nasıl Çalışır?
+            </a>
+          </nav>
 
-      <div className="popular-tags">  
-        <span>Popüler:</span>  
+          <div className="header-actions">
 
-        {[  
-          "Oyun",  
-          "Kahve",  
-          "Gezi",  
-          "Spor",  
-          "Sinema"  
-        ].map((tag) => (  
-          <button key={tag}>  
-            {tag}  
-          </button>  
-        ))}  
-      </div>  
-    </div>  
-  </section>  
+            <Link
+              href="/ilan-ver"
+              className="create-button"
+            >
+              <Plus size={18} />
+              İlan Ver
+            </Link>
 
-  <section  
-    className="container listings-section"  
-    id="ilanlar"  
-  >  
-    <div className="section-header">  
-      <div>  
-        <div className="section-label">  
-          KEŞFET  
-        </div>  
+            {checkingAuth
+              ? null
+              : user
+                ? (
+                  <>
+                    <Link
+                      href="/profil"
+                      className="account-button"
+                    >
+                      <User size={17} />
+                      Profilim
+                    </Link>
 
-        <h2>  
-          Yeni arkadaşlık ilanları  
-        </h2>  
+                    <button
+                      type="button"
+                      className="logout-button"
+                      onClick={handleLogout}
+                    >
+                      <LogOut size={17} />
+                      Çıkış
+                    </button>
+                  </>
+                )
+                : (
+                  <>
+                    <Link
+                      href="/giris"
+                      className="login-button"
+                    >
+                      Giriş Yap
+                    </Link>
 
-        <p>  
-          Sana uygun insanları keşfet ve yeni  
-          bağlantılar kur.  
-        </p>  
-      </div>  
+                    <Link
+                      href="/kayit"
+                      className="register-button"
+                    >
+                      Kayıt Ol
+                    </Link>
+                  </>
+                )}
 
-      <button className="filter-button">  
-        <SlidersHorizontal size={17} />  
-        Filtrele  
-      </button>  
-    </div>  
+          </div>
+        </div>
+      </header>
 
-    <div className="listing-grid">  
-      {listings.map((item, index) => (  
-        <div key={item.id}>  
-          <ListingCard item={item} />  
+      <section className="hero">
+        <div className="hero-background one" />
+        <div className="hero-background two" />
 
-          {(index + 1) % 4 === 0 && (  
-            <AdSlot size="medium" />  
-          )}  
-        </div>  
-      ))}  
-    </div>  
-  </section>  
+        <div className="container hero-content">
 
-  <section  
-    className="how-section"  
-    id="nasil"  
-  >  
-    <div className="container">  
-      <div className="section-label">  
-        ÇOK KOLAY  
-      </div>  
+          <div className="hero-label">
+            <Sparkles size={15} />
+            Yeni insanlarla tanış
+          </div>
 
-      <h2>  
-        Yeni bir arkadaşlık  
-        <br />  
-        3 adım uzağında.  
-      </h2>  
+          <h1>
+            Aradığın arkadaşlık
+            <br />
+            <span>
+              burada başlayabilir.
+            </span>
+          </h1>
 
-      <div className="steps">  
-        <div className="step">  
-          <span>01</span>  
+          <p>
+            Ortak ilgi alanlarına sahip
+            insanları keşfet,
+            arkadaşlık ilanlarını incele
+            ve yeni bağlantılar kur.
+          </p>
 
-          <h3>Keşfet</h3>  
+          <div className="search-panel">
 
-          <p>  
-            Şehrini ve ilgi alanlarını seçerek  
-            sana uygun ilanları bul.  
-          </p>  
-        </div>  
+            <div className="search-input">
+              <Search size={20} />
 
-        <div className="step">  
-          <span>02</span>  
+              <input
+                type="text"
+                placeholder="Ne tür bir arkadaş arıyorsun?"
+              />
+            </div>
 
-          <h3>Tanış</h3>  
+            <div className="city-input">
+              <MapPin size={19} />
 
-          <p>  
-            Profilleri incele, ortak noktalarınızı  
-            keşfet ve iletişim kur.  
-          </p>  
-        </div>  
+              <select defaultValue="">
+                <option
+                  value=""
+                  disabled
+                >
+                  Şehir seç
+                </option>
 
-        <div className="step">  
-          <span>03</span>  
+                <option>
+                  Mardin
+                </option>
 
-          <h3>Bağlan</h3>  
+                <option>
+                  Diyarbakır
+                </option>
 
-          <p>  
-            Yeni arkadaşlığını güzel anılara  
-            dönüştür.  
-          </p>  
-        </div>  
-      </div>  
-    </div>  
-  </section>  
+                <option>
+                  Gaziantep
+                </option>
 
-  <footer>  
-    <div className="container footer">  
-      <div className="logo">  
-        <span className="logo-icon">♡</span>  
-        Arkadaş<span>Bul</span>  
-      </div>  
+                <option>
+                  Şanlıurfa
+                </option>
 
-      <p>  
-        Yeni arkadaşlıklar, gerçek bağlantılar.  
-      </p>  
+                <option>
+                  Batman
+                </option>
+              </select>
+            </div>
 
-      <small>  
-        © 2026 ArkadaşBul  
-      </small>  
-    </div>  
-  </footer>  
-</main>
+            <button className="search-button">
+              İlanları Bul
+            </button>
 
-);
+          </div>
+
+          <div className="popular-tags">
+            <span>
+              Popüler:
+            </span>
+
+            {[
+              "Oyun",
+              "Kahve",
+              "Gezi",
+              "Spor",
+              "Sinema"
+            ].map((tag) => (
+              <button key={tag}>
+                {tag}
+              </button>
+            ))}
+          </div>
+
+        </div>
+      </section>
+
+      <section
+        className="container listings-section"
+        id="ilanlar"
+      >
+
+        <div className="section-header">
+
+          <div>
+
+            <div className="section-label">
+              KEŞFET
+            </div>
+
+            <h2>
+              Yeni arkadaşlık ilanları
+            </h2>
+
+            <p>
+              Sana uygun insanları keşfet ve yeni
+              bağlantılar kur.
+            </p>
+
+          </div>
+
+          <button className="filter-button">
+            <SlidersHorizontal size={17} />
+            Filtrele
+          </button>
+
+        </div>
+
+        {loadingListings ? (
+          <div className="empty-state">
+            İlanlar yükleniyor...
+          </div>
+        ) : listings.length === 0 ? (
+          <div className="empty-state">
+            Henüz ilan bulunmuyor.
+          </div>
+        ) : (
+          <div className="listing-grid">
+
+            {listings.map(
+              (item, index) => (
+                <div key={item.id}>
+
+                  <ListingCard
+                    item={item}
+                  />
+
+                  {(index + 1) % 4 === 0 && (
+                    <AdSlot size="medium" />
+                  )}
+
+                </div>
+              )
+            )}
+
+          </div>
+        )}
+
+      </section>
+
+      <section
+        className="how-section"
+        id="nasil"
+      >
+        <div className="container">
+
+          <div className="section-label">
+            ÇOK KOLAY
+          </div>
+
+          <h2>
+            Yeni bir arkadaşlık
+            <br />
+            3 adım uzağında.
+          </h2>
+
+          <div className="steps">
+
+            <div className="step">
+              <span>01</span>
+
+              <h3>
+                Keşfet
+              </h3>
+
+              <p>
+                Şehrini ve ilgi alanlarını
+                seçerek sana uygun ilanları bul.
+              </p>
+            </div>
+
+            <div className="step">
+              <span>02</span>
+
+              <h3>
+                Tanış
+              </h3>
+
+              <p>
+                Profilleri incele, ortak
+                noktalarınızı keşfet ve iletişim kur.
+              </p>
+            </div>
+
+            <div className="step">
+              <span>03</span>
+
+              <h3>
+                Bağlan
+              </h3>
+
+              <p>
+                Yeni arkadaşlığını güzel
+                anılara dönüştür.
+              </p>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <div className="container footer">
+
+          <div className="logo">
+            <span className="logo-icon">
+              ♡
+            </span>
+
+            Arkadaş<span>Bul</span>
+          </div>
+
+          <p>
+            Yeni arkadaşlıklar,
+            gerçek bağlantılar.
+          </p>
+
+          <small>
+            © 2026 ArkadaşBul
+          </small>
+
+        </div>
+      </footer>
+    </main>
+  );
 }
