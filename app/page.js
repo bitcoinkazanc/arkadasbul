@@ -5,11 +5,11 @@ import { useEffect, useState } from "react";
 import {
   Search,
   MapPin,
-  Heart,
-  Plus,
-  SlidersHorizontal,
-  Sparkles,
   User,
+  Heart,
+  Users,
+  ShieldCheck,
+  ArrowRight,
   LogOut
 } from "lucide-react";
 
@@ -17,158 +17,208 @@ import AdSlot from "./components/AdSlot";
 import { createClient } from "./lib/supabase/client";
 
 function ListingCard({ item }) {
-  const avatarLetter =
-    item.name?.trim()?.charAt(0)?.toUpperCase() || "?";
+  const profile = item.profile || {};
 
-  const interests = Array.isArray(item.interests)
-    ? item.interests
-    : [];
+  const name = profile.name || "İsimsiz";
+  const avatar = profile.avatar_url || item.avatar_url || "";
 
   return (
     <article className="listing-card">
-      <div className="listing-header">
-        <div className="avatar-container">
-          {item.avatar_url ? (
+
+      <div className="listing-card-header">
+
+        <div className="listing-avatar">
+          {avatar ? (
             <img
-              src={item.avatar_url}
-              alt={item.name || "Kullanıcı"}
-              className="avatar"
+              src={avatar}
+              alt={name}
             />
           ) : (
-            <div className="avatar">
-              {avatarLetter}
+            <User size={28} />
+          )}
+        </div>
+
+        <div className="listing-user-info">
+
+          <h3>
+            {name}
+          </h3>
+
+          <div className="listing-meta">
+
+            {item.age && (
+              <span>
+                {item.age} yaş
+              </span>
+            )}
+
+            {item.city && (
+              <span>
+                <MapPin size={13} />
+                {item.city}
+              </span>
+            )}
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <div className="listing-card-body">
+
+        <h4>
+          {item.title || "Arkadaşlık İlanı"}
+        </h4>
+
+        <p>
+          {item.bio ||
+            "Arkadaşlık için yeni insanlarla tanışmak istiyorum."}
+        </p>
+
+        {Array.isArray(item.interests) &&
+          item.interests.length > 0 && (
+            <div className="tags">
+
+              {item.interests
+                .slice(0, 5)
+                .map((interest) => (
+                  <span key={interest}>
+                    {interest}
+                  </span>
+                ))}
+
             </div>
           )}
 
-          <span className="online-indicator" />
-        </div>
-
-        <div className="user-info">
-          <h3>
-            {item.name || "İsimsiz"}, {item.age}
-          </h3>
-
-          <div className="location">
-            <MapPin size={14} />
-            {item.city}
-          </div>
-        </div>
-
-        <button
-          type="button"
-          className="favorite-button"
-          aria-label="Favorilere ekle"
-        >
-          <Heart size={19} />
-        </button>
       </div>
 
-      <p className="listing-text">
-        {item.bio}
-      </p>
+      <div className="listing-card-footer">
 
-      {interests.length > 0 && (
-        <div className="tags">
-          {interests.slice(0, 6).map((tag) => (
-            <span key={tag}>{tag}</span>
-          ))}
-        </div>
-      )}
-
-      <div className="listing-footer">
-        <span className="online-text">
-          ● Aktif
+        <span className="listing-gender">
+          {item.gender || ""}
         </span>
 
         <Link
           href={`/ilan/${item.id}`}
           className="profile-button"
         >
-          Profili Gör →
+          İlanı Gör
+          <ArrowRight size={15} />
         </Link>
+
       </div>
+
     </article>
   );
 }
 
-export default function Home() {
-  const supabase = createClient();
+export default function HomePage() {
+  const [listings, setListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const [user, setUser] = useState(null);
-  const [checkingAuth, setCheckingAuth] = useState(true);
-
-  const [listings, setListings] = useState([]);
-  const [loadingListings, setLoadingListings] = useState(true);
-  const [listingError, setListingError] = useState("");
 
   useEffect(() => {
-    let mounted = true;
+    async function loadPage() {
+      const supabase = createClient();
 
-    async function loadUser() {
-      const {
-        data: { user }
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: {
+            user: currentUser
+          }
+        } = await supabase.auth.getUser();
 
-      if (mounted) {
-        setUser(user);
-        setCheckingAuth(false);
-      }
-    }
+        setUser(currentUser || null);
 
-    loadUser();
+        const {
+          data: listingsData,
+          error: listingsError
+        } = await supabase
+          .from("listings")
+          .select("*")
+          .order("created_at", {
+            ascending: false
+          });
 
-    const {
-      data: { subscription }
-    } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-        setCheckingAuth(false);
-      }
-    );
+        if (listingsError) {
+          throw listingsError;
+        }
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [supabase]);
+        const listingRows = listingsData || [];
 
-  useEffect(() => {
-    let mounted = true;
+        /*
+         * İlanların sahibi profiles tablosunda tutuluyor.
+         * Her ilan için user_id üzerinden profil bilgilerini alıyoruz.
+         */
+        const userIds = [
+          ...new Set(
+            listingRows
+              .map((item) => item.user_id)
+              .filter(Boolean)
+          )
+        ];
 
-    async function loadListings() {
-      setLoadingListings(true);
-      setListingError("");
+        let profiles = [];
 
-      const { data, error } = await supabase
-        .from("listings")
-        .select("*")
-        .order("created_at", {
-          ascending: false
+        if (userIds.length > 0) {
+          const {
+            data: profileData,
+            error: profileError
+          } = await supabase
+            .from("profiles")
+            .select(
+              "id, name, avatar_url, age, gender, city"
+            )
+            .in("id", userIds);
+
+          if (profileError) {
+            console.error(
+              "Profil bilgileri alınamadı:",
+              profileError
+            );
+          } else {
+            profiles = profileData || [];
+          }
+        }
+
+        const profileMap = {};
+
+        profiles.forEach((profile) => {
+          profileMap[profile.id] = profile;
         });
 
-      if (!mounted) return;
+        const combinedListings =
+          listingRows.map((listing) => ({
+            ...listing,
+            profile:
+              profileMap[listing.user_id] || null
+          }));
 
-      if (error) {
-        console.error("İlanlar yüklenemedi:", error);
-        setListingError(
+        setListings(combinedListings);
+
+      } catch (err) {
+        console.error(
+          "Ana sayfa yükleme hatası:",
+          err
+        );
+
+        setError(
           "İlanlar yüklenirken bir hata oluştu."
         );
-        setListings([]);
-      } else {
-        setListings(data || []);
+      } finally {
+        setLoading(false);
       }
-
-      setLoadingListings(false);
     }
 
-    loadListings();
-
-    return () => {
-      mounted = false;
-    };
-  }, [supabase]);
+    loadPage();
+  }, []);
 
   async function handleLogout() {
+    const supabase = createClient();
+
     await supabase.auth.signOut();
 
     window.location.href = "/";
@@ -176,276 +226,448 @@ export default function Home() {
 
   return (
     <main>
+
       <header className="header">
+
         <div className="container navigation">
-          <Link className="logo" href="/">
-            <span className="logo-icon">♡</span>
-            Arkadaş<span>Bul</span>
+
+          <Link
+            href="/"
+            className="logo"
+          >
+            <span className="logo-icon">
+              ♡
+            </span>
+
+            Arkadaş
+            <span>Bul</span>
           </Link>
 
-          <nav>
-            <a href="#ilanlar">İlanlar</a>
-            <a href="#nasil">Nasıl Çalışır?</a>
-          </nav>
+          <nav className="nav-links">
 
-          <div className="header-actions">
-            <Link
-              href="/ilan-ver"
-              className="create-button"
-            >
-              <Plus size={18} />
-              İlan Ver
+            <Link href="/">
+              İlanlar
             </Link>
 
-            {checkingAuth ? null : user ? (
+            {user ? (
               <>
-                <Link
-                  href="/profil"
-                  className="account-button"
-                >
-                  <User size={17} />
+                <Link href="/profil">
                   Profilim
+                </Link>
+
+                <Link href="/ilan-ver">
+                  İlan Ver
                 </Link>
 
                 <button
                   type="button"
-                  className="logout-button"
+                  className="nav-logout"
                   onClick={handleLogout}
                 >
-                  <LogOut size={17} />
+                  <LogOut size={15} />
                   Çıkış
                 </button>
               </>
             ) : (
               <>
-                <Link
-                  href="/giris"
-                  className="login-button"
-                >
+                <Link href="/giris">
                   Giriş Yap
                 </Link>
 
                 <Link
                   href="/kayit"
-                  className="register-button"
+                  className="nav-button"
                 >
                   Kayıt Ol
                 </Link>
               </>
             )}
-          </div>
+
+          </nav>
+
         </div>
+
       </header>
 
+
       <section className="hero">
-        <div className="hero-background one" />
-        <div className="hero-background two" />
 
         <div className="container hero-content">
-          <div className="hero-label">
-            <Sparkles size={15} />
-            Yeni insanlarla tanış
+
+          <div className="section-label">
+            ARKADAŞLIK PLATFORMU
           </div>
 
           <h1>
-            Aradığın arkadaşlık
+            Yeni insanlarla
             <br />
-            <span>burada başlayabilir.</span>
+            <span>tanış.</span>
           </h1>
 
           <p>
-            Ortak ilgi alanlarına sahip insanları keşfet,
-            arkadaşlık ilanlarını incele ve yeni bağlantılar kur.
+            Ortak ilgi alanlarına sahip
+            insanları bul, sohbet et ve
+            yeni arkadaşlıklar kur.
           </p>
 
-          <div className="search-panel">
-            <div className="search-input">
-              <Search size={20} />
+          <div className="hero-actions">
+
+            <Link
+              href="#ilanlar"
+              className="publish-button"
+            >
+              İlanları Keşfet
+              <ArrowRight size={17} />
+            </Link>
+
+            <Link
+              href="/ilan-ver"
+              className="secondary-button"
+            >
+              İlan Ver
+            </Link>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <section
+        className="search-section"
+        id="ilanlar"
+      >
+
+        <div className="container">
+
+          <div className="search-box">
+
+            <div className="search-input-wrapper">
+
+              <Search size={19} />
 
               <input
                 type="text"
-                placeholder="Ne tür bir arkadaş arıyorsun?"
+                placeholder="Şehir, ilgi alanı veya yaş ara..."
               />
-            </div>
 
-            <div className="city-input">
-              <MapPin size={19} />
-
-              <select defaultValue="">
-                <option value="" disabled>
-                  Şehir seç
-                </option>
-
-                <option>Mardin</option>
-                <option>Diyarbakır</option>
-                <option>Gaziantep</option>
-                <option>Şanlıurfa</option>
-                <option>Batman</option>
-              </select>
             </div>
 
             <button
               type="button"
               className="search-button"
             >
-              İlanları Bul
+              Ara
             </button>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <section className="listings-section">
+
+        <div className="container">
+
+          <div className="section-header">
+
+            <div>
+
+              <div className="section-label">
+                SON İLANLAR
+              </div>
+
+              <h2>
+                Arkadaşını bul
+              </h2>
+
+            </div>
+
+            <span className="listing-count">
+              {listings.length} ilan
+            </span>
+
+          </div>
+
+
+          {loading && (
+            <div className="empty-state">
+              <p>
+                İlanlar yükleniyor...
+              </p>
+            </div>
+          )}
+
+
+          {!loading && error && (
+            <div className="empty-state">
+              <p>
+                {error}
+              </p>
+            </div>
+          )}
+
+
+          {!loading &&
+            !error &&
+            listings.length === 0 && (
+              <div className="empty-state">
+
+                <User size={30} />
+
+                <h3>
+                  Henüz ilan yok
+                </h3>
+
+                <p>
+                  İlk ilanı sen ver.
+                </p>
+
+                <Link
+                  href="/ilan-ver"
+                  className="publish-button"
+                >
+                  İlan Ver
+                </Link>
+
+              </div>
+            )}
+
+
+          {!loading &&
+            !error &&
+            listings.length > 0 && (
+
+              <div className="listings-grid">
+
+                {listings.map(
+                  (item, index) => (
+                    <div
+                      key={item.id}
+                    >
+
+                      <ListingCard
+                        item={item}
+                      />
+
+                      {(index + 1) % 4 ===
+                        0 && (
+                        <div
+                          style={{
+                            marginTop:
+                              "20px",
+                            marginBottom:
+                              "20px"
+                          }}
+                        >
+                          <AdSlot />
+                        </div>
+                      )}
+
+                    </div>
+                  )
+                )}
+
+              </div>
+
+            )}
+
+        </div>
+
+      </section>
+
+
+      <section className="popular-section">
+
+        <div className="container">
+
+          <div className="section-label">
+            POPÜLER İLGİ ALANLARI
           </div>
 
           <div className="popular-tags">
-            <span>Popüler:</span>
 
             {[
               "Oyun",
+              "Müzik",
               "Kahve",
+              "Sinema",
+              "Kitap",
               "Gezi",
               "Spor",
-              "Sinema"
-            ].map((tag) => (
-              <button
-                key={tag}
-                type="button"
-              >
-                {tag}
-              </button>
-            ))}
+              "Teknoloji"
+            ].map(
+              (item) => (
+                <span key={item}>
+                  {item}
+                </span>
+              )
+            )}
+
           </div>
+
         </div>
+
       </section>
 
-      <section
-        className="container listings-section"
-        id="ilanlar"
-      >
-        <div className="section-header">
-          <div>
-            <div className="section-label">
-              KEŞFET
+
+      <section className="how-section">
+
+        <div className="container">
+
+          <div className="section-header">
+
+            <div>
+
+              <div className="section-label">
+                NASIL ÇALIŞIR?
+              </div>
+
+              <h2>
+                Arkadaş bulmak çok kolay
+              </h2>
+
             </div>
 
-            <h2>
-              Yeni arkadaşlık ilanları
-            </h2>
-
-            <p>
-              Sana uygun insanları keşfet ve yeni
-              bağlantılar kur.
-            </p>
           </div>
 
-          <button
-            type="button"
-            className="filter-button"
-          >
-            <SlidersHorizontal size={17} />
-            Filtrele
-          </button>
+
+          <div className="steps-grid">
+
+            <div className="step-card">
+
+              <div className="step-icon">
+                <User size={23} />
+              </div>
+
+              <span>
+                01
+              </span>
+
+              <h3>
+                Profilini oluştur
+              </h3>
+
+              <p>
+                Kendinden bahset ve
+                ilgi alanlarını seç.
+              </p>
+
+            </div>
+
+
+            <div className="step-card">
+
+              <div className="step-icon">
+                <Search size={23} />
+              </div>
+
+              <span>
+                02
+              </span>
+
+              <h3>
+                İlanları keşfet
+              </h3>
+
+              <p>
+                Sana uygun insanları
+                şehir ve ilgi alanına
+                göre bul.
+              </p>
+
+            </div>
+
+
+            <div className="step-card">
+
+              <div className="step-icon">
+                <Heart size={23} />
+              </div>
+
+              <span>
+                03
+              </span>
+
+              <h3>
+                Bağlantı kur
+              </h3>
+
+              <p>
+                İlgini çeken kişiye
+                ulaş ve tanış.
+              </p>
+
+            </div>
+
+          </div>
+
         </div>
 
-        {loadingListings ? (
-          <div className="empty-state">
-            <p>İlanlar yükleniyor...</p>
-          </div>
-        ) : listingError ? (
-          <div className="empty-state">
-            <p>{listingError}</p>
-          </div>
-        ) : listings.length === 0 ? (
-          <div className="empty-state">
-            <p>
-              Henüz yayınlanmış bir ilan bulunmuyor.
-            </p>
+      </section>
+
+
+      <footer className="footer">
+
+        <div className="container footer-content">
+
+          <div>
 
             <Link
-              href="/ilan-ver"
-              className="profile-button"
+              href="/"
+              className="logo"
             >
-              İlk İlanı Ver →
+              <span className="logo-icon">
+                ♡
+              </span>
+
+              Arkadaş
+              <span>Bul</span>
             </Link>
-          </div>
-        ) : (
-          <div className="listing-grid">
-            {listings.map((item, index) => (
-              <div key={item.id}>
-                <ListingCard item={item} />
 
-                {(index + 1) % 4 === 0 && (
-                  <AdSlot size="medium" />
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+            <p>
+              Yeni arkadaşlıkların
+              başlangıç noktası.
+            </p>
 
-      <section
-        className="how-section"
-        id="nasil"
-      >
-        <div className="container">
-          <div className="section-label">
-            ÇOK KOLAY
           </div>
 
-          <h2>
-            Yeni bir arkadaşlık
-            <br />
-            3 adım uzağında.
-          </h2>
+          <div className="footer-links">
 
-          <div className="steps">
-            <div className="step">
-              <span>01</span>
+            <Link href="/">
+              Ana Sayfa
+            </Link>
 
-              <h3>Keşfet</h3>
+            <Link href="/profil">
+              Profilim
+            </Link>
 
-              <p>
-                Şehrini ve ilgi alanlarını seçerek
-                sana uygun ilanları bul.
-              </p>
-            </div>
+            <Link href="/ilan-ver">
+              İlan Ver
+            </Link>
 
-            <div className="step">
-              <span>02</span>
-
-              <h3>Tanış</h3>
-
-              <p>
-                Profilleri incele, ortak noktalarınızı
-                keşfet ve iletişim kur.
-              </p>
-            </div>
-
-            <div className="step">
-              <span>03</span>
-
-              <h3>Bağlan</h3>
-
-              <p>
-                Yeni arkadaşlığını güzel anılara
-                dönüştür.
-              </p>
-            </div>
           </div>
+
         </div>
-      </section>
 
-      <footer>
-        <div className="container footer">
-          <div className="logo">
-            <span className="logo-icon">♡</span>
-            Arkadaş<span>Bul</span>
-          </div>
+        <div className="container footer-bottom">
 
-          <p>
-            Yeni arkadaşlıklar, gerçek bağlantılar.
-          </p>
-
-          <small>
+          <span>
             © 2026 ArkadaşBul
-          </small>
+          </span>
+
+          <span>
+            <ShieldCheck size={14} />
+            Güvenli arkadaşlık
+          </span>
+
         </div>
+
       </footer>
+
     </main>
   );
 }
